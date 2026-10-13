@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="UTF-8" /></head>
+  <body>
+    <template id="s2-work-template">
+      <style>
+        #s2-root { position: absolute; inset: 0; overflow: hidden; background: #0b1310; color: #e6efe9; font-family: "JetBrains Mono", monospace; }
+        #s2-grid { position: absolute; left: -60px; top: -60px; width: 1200px; height: 1320px; background-image: linear-gradient(#15211c 2px, transparent 2px), linear-gradient(90deg, #15211c 2px, transparent 2px); background-size: 60px 60px; }
+        #s2-glow { position: absolute; width: 1100px; height: 1100px; left: -520px; bottom: -560px; border-radius: 50%; background: radial-gradient(circle, rgba(79, 209, 139, 0.6) 0%, rgba(79, 209, 139, 0) 62%); opacity: 0; }
+        #s2-root .top { position: absolute; left: 72px; right: 72px; top: 64px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+        #s2-root .top-label { font-size: 24px; color: #8da399; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 700px; }
+        #s2-root .clock-wrap { display: flex; align-items: baseline; gap: 14px; }
+        #s2-root .clock-label { font-size: 24px; color: #8da399; }
+        #s2-clock { font-size: 40px; font-weight: 700; font-variant-numeric: tabular-nums; }
+        #s2-root .rule { position: absolute; left: 72px; top: 136px; width: 936px; height: 2px; background: #1e2b25; }
+        #s2-root .head { position: absolute; left: 72px; top: 178px; width: 936px; }
+        #s2-root .h { font-family: "Archivo Black", sans-serif; font-size: 90px; line-height: 1.06; letter-spacing: -0.035em; white-space: nowrap; transform-origin: 0% 60%; }
+        #s2-status { position: absolute; left: 72px; top: 392px; font-size: 32px; color: #8da399; opacity: 0; }
+        #s2-root .rows { position: absolute; left: 72px; top: 440px; width: 936px; }
+        #s2-root .row { display: flex; justify-content: space-between; align-items: baseline; gap: 24px; font-size: 34px; padding: 14px 0; border-bottom: 2px solid #1e2b25; opacity: 0; }
+        #s2-root .fname { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+        #s2-root .meta { font-size: 30px; color: #8da399; white-space: nowrap; }
+        #s2-root .add { color: #4fd18b; font-weight: 700; }
+        #s2-root .del { color: #ff6b5e; font-weight: 700; }
+        #s2-root .mod { color: #e6c46b; font-weight: 700; }
+        #s2-code { position: absolute; left: 72px; width: 936px; background: #101a16; border: 2px solid #1e2b25; border-radius: 22px; padding: 26px 36px 30px; opacity: 0; }
+        #s2-root .code-title { font-size: 24px; color: #8da399; margin-bottom: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        #s2-root .cl { font-size: 30px; line-height: 1.6; white-space: pre; overflow: hidden; text-overflow: ellipsis; opacity: 0; }
+      </style>
+      <div id="s2-root" data-composition-id="s2-work" data-width="1080" data-height="1080" data-duration="6.5">
+        <div id="s2-grid" data-layout-allow-overflow></div>
+        <div id="s2-glow" data-layout-allow-overflow></div>
+        <div class="top">
+          <div class="top-label" id="s2-label"></div>
+          <div class="clock-wrap"><span class="clock-label">session</span><span id="s2-clock">00:00</span></div>
+        </div>
+        <div class="rule"></div>
+        <div class="head">
+          <div class="h" id="s2-h1">Claude went</div>
+          <div class="h" id="s2-h2">to work.</div>
+        </div>
+        <div id="s2-status">working.</div>
+        <div class="rows" id="s2-rows"></div>
+        <div id="s2-code"><div class="code-title" id="s2-code-title"></div><div id="s2-code-lines"></div></div>
+      </div>
+      <script>
+        window.CLIP = /*__CLIP_DATA__*/null;
+        (function () {
+          var D = window.CLIP;
+          var DUR = 6.5;
+          var tl = gsap.timeline({ paused: true });
+          var MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+          var d = D.date.split("-");
+          document.getElementById("s2-label").textContent = D.repo.split("/").pop() + " · real Claude Code session · " + MONTHS[+d[1] - 1] + " " + (+d[2]);
+
+          function secs(clock) { var p = clock.split(":"); return (+p[0]) * 60 + (+p[1]); }
+          function fmt(sec) { var s = Math.floor(sec); var m = Math.floor(s / 60); var r = s % 60; return (m < 10 ? "0" : "") + m + ":" + (r < 10 ? "0" : "") + r; }
+          function esc(s) { return String(s).replace(/[&<>]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]; }); }
+
+          // Rows from the real file edits; the clock lands on each file's real offset.
+          var files = D.files.slice(0, 3);
+          var ROW_AT = [3.3, 4.1, 4.7];
+          var rowsEl = document.getElementById("s2-rows");
+          files.forEach(function (f, i) {
+            var mark = f.kind === "new" ? '<span class="add">+</span>' : '<span class="mod">~</span>';
+            var meta = f.kind === "new" ? "new · " + f.added + " lines" : '<span class="add">+' + f.added + '</span> <span class="del">-' + f.removed + "</span>";
+            rowsEl.insertAdjacentHTML("beforeend", '<div class="row" id="s2-row' + i + '"><span class="fname">' + mark + " " + esc(f.file) + '</span><span class="meta">' + meta + "</span></div>");
+          });
+          var CLOCK = [[0, 0], [0.2, 0]];
+          files.forEach(function (f, i) { CLOCK.push([ROW_AT[i], secs(f.clock)]); });
+          function clockAt(t) {
+            if (t <= CLOCK[0][0]) return CLOCK[0][1];
+            for (var i = 1; i < CLOCK.length; i++) if (t <= CLOCK[i][0]) { var a = CLOCK[i - 1], b = CLOCK[i]; return a[1] + ((b[1] - a[1]) * (t - a[0])) / (b[0] - a[0]); }
+            return CLOCK[CLOCK.length - 1][1];
+          }
+
+          // Code card under the rows, from the first new file's real lines.
+          var codeEl = document.getElementById("s2-code");
+          var lines = D.codeLines.slice(0, 4);
+          if (lines.length) {
+            var src = files.filter(function (f) { return f.kind === "new"; })[0] || files[0];
+            document.getElementById("s2-code-title").textContent = src ? src.file : "";
+            var linesEl = document.getElementById("s2-code-lines");
+            lines.forEach(function (l, i) { linesEl.insertAdjacentHTML("beforeend", '<div class="cl" id="s2-l' + i + '" data-layout-allow-overflow>' + esc(l) + "</div>"); });
+            codeEl.style.top = 440 + files.length * 70 + 28 + "px";
+          }
+
+          tl.fromTo("#s2-grid", { y: -30 }, { y: -60, duration: DUR, ease: "none" }, 0);
+          tl.fromTo("#s2-glow", { opacity: 0, scale: 0.85 }, { opacity: 0.24, scale: 1, duration: 1.0, ease: "power2.out" }, 0);
+          var glow = document.getElementById("s2-glow");
+          var breathe = { p: 0 };
+          tl.to(breathe, { p: Math.PI * 4, duration: DUR - 1.0, ease: "none", onUpdate: function () {
+            var s = Math.sin(breathe.p);
+            glow.style.opacity = String(0.24 + s * 0.04);
+            glow.style.transform = "scale(" + (1 + s * 0.02) + ")";
+          } }, 1.0);
+          tl.fromTo("#s2-h1", { scale: 0, opacity: 0, y: 24 }, { scale: 1, opacity: 1, y: 0, duration: 0.55, ease: "power3.out" }, 0.12);
+          tl.fromTo("#s2-h2", { scale: 0, opacity: 0, y: 24 }, { scale: 1, opacity: 1, y: 0, duration: 0.55, ease: "power3.out" }, 0.22);
+          tl.set("#s2-status", { opacity: 1 }, 0.55);
+          tl.set("#s2-status", { opacity: 0 }, 3.3);
+
+          function whip(sel, at, dy, dur) { tl.set(sel, { opacity: 1, y: dy }, at); tl.to(sel, { y: 0, duration: dur, ease: "power4.out" }, at); }
+          files.forEach(function (f, i) { whip("#s2-row" + i, ROW_AT[i], 60, 0.18); });
+          if (lines.length) {
+            tl.fromTo("#s2-code", { y: 36, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, ease: "power3.out" }, 3.38);
+            lines.forEach(function (l, i) { whip("#s2-l" + i, 3.52 + i * 0.12, 40, 0.15); });
+          }
+
+          var clockEl = document.getElementById("s2-clock");
+          var statusEl = document.getElementById("s2-status");
+          var driver = { t: 0 };
+          tl.to(driver, { t: DUR, duration: DUR, ease: "none", onUpdate: function () {
+            var c = fmt(clockAt(driver.t));
+            if (clockEl.textContent !== c) clockEl.textContent = c;
+            var dots = 1 + (Math.max(0, Math.floor((driver.t - 0.55) / 0.35)) % 3);
+            var s = "working" + "...".slice(0, dots);
+            if (statusEl.textContent !== s) statusEl.textContent = s;
+          } }, 0);
+
+          window.__timelines["s2-work"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="UTF-8" /></head>
+  <body>
+    <template id="s1-ask-template">
+      <style>
+        #s1-root { position: absolute; inset: 0; overflow: hidden; background: #0b1310; color: #e6efe9; font-family: "JetBrains Mono", monospace; }
+        #s1-grid { position: absolute; left: -60px; top: -60px; width: 1200px; height: 1320px; background-image: linear-gradient(#15211c 2px, transparent 2px), linear-gradient(90deg, #15211c 2px, transparent 2px); background-size: 60px 60px; }
+        #s1-glow { position: absolute; width: 1000px; height: 1000px; right: -420px; top: -460px; border-radius: 50%; background: radial-gradient(circle, rgba(79, 209, 139, 0.6) 0%, rgba(79, 209, 139, 0) 62%); opacity: 0; }
+        #s1-top { position: absolute; left: 72px; right: 72px; top: 64px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+        #s1-root .top-label { font-size: 24px; color: #8da399; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 700px; }
+        #s1-root .clock-wrap { display: flex; align-items: baseline; gap: 14px; }
+        #s1-root .clock-label { font-size: 24px; color: #8da399; }
+        #s1-clock { font-size: 40px; font-weight: 700; font-variant-numeric: tabular-nums; }
+        #s1-rule { position: absolute; left: 72px; top: 136px; width: 936px; height: 2px; background: #1e2b25; transform-origin: 0% 50%; }
+        #s1-root .head { position: absolute; left: 72px; top: 178px; width: 936px; }
+        #s1-root .h { font-family: "Archivo Black", sans-serif; font-size: 90px; line-height: 1.06; letter-spacing: -0.035em; white-space: nowrap; transform-origin: 0% 60%; }
+        #s1-term { position: absolute; left: 72px; top: 432px; width: 936px; background: #101a16; border: 2px solid #1e2b25; border-radius: 22px; padding: 26px 40px 44px; }
+        #s1-root .term-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 30px; }
+        #s1-root .tdot { display: block; width: 16px; height: 16px; border-radius: 50%; background: #2a3a33; }
+        #s1-root .term-title { margin-left: 14px; font-size: 24px; color: #8da399; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 560px; }
+        #s1-sent { margin-left: auto; font-size: 24px; font-weight: 700; color: #0b1310; background: #4fd18b; padding: 8px 18px; border-radius: 10px; transform-origin: 100% 50%; opacity: 0; }
+        #s1-root .line { display: flex; align-items: flex-start; gap: 22px; font-size: 46px; line-height: 1.32; min-height: 183px; }
+        #s1-root .prompt-mark { color: #4fd18b; font-weight: 700; }
+        #s1-root .text-wrap { flex: 1; min-width: 0; white-space: pre-wrap; }
+        #s1-cursor { display: inline-block; width: 22px; height: 50px; vertical-align: -9px; margin-left: 3px; background: #e6efe9; }
+      </style>
+      <div id="s1-root" data-composition-id="s1-ask" data-width="1080" data-height="1080" data-duration="6">
+        <div id="s1-grid" data-layout-allow-overflow></div>
+        <div id="s1-glow" data-layout-allow-overflow></div>
+        <div id="s1-top">
+          <div class="top-label" id="s1-label"></div>
+          <div class="clock-wrap"><span class="clock-label">session</span><span id="s1-clock">00:00</span></div>
+        </div>
+        <div id="s1-rule"></div>
+        <div class="head">
+          <div class="h" id="s1-h1">One prompt.</div>
+          <div class="h" id="s1-h2">Sent as typed.</div>
+        </div>
+        <div id="s1-term">
+          <div class="term-bar">
+            <span class="tdot"></span><span class="tdot"></span><span class="tdot"></span>
+            <span class="term-title" id="s1-title"></span>
+            <span id="s1-sent">sent</span>
+          </div>
+          <div class="line">
+            <span class="prompt-mark">&gt;</span>
+            <span class="text-wrap"><span id="s1-text"></span><span id="s1-cursor"></span></span>
+          </div>
+        </div>
+      </div>
+      <script>
+        window.CLIP = /*__CLIP_DATA__*/null;
+        (function () {
+          var D = window.CLIP;
+          var DUR = 6;
+          var tl = gsap.timeline({ paused: true });
+          var MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+          var d = D.date.split("-");
+          var when = MONTHS[+d[1] - 1] + " " + (+d[2]);
+          var name = D.repo.split("/").pop();
+          document.getElementById("s1-label").textContent = name + " · real Claude Code session · " + when;
+          document.getElementById("s1-title").textContent = "claude · " + name;
+
+          // The prompt as the session recorded it, cut at 140 chars so it fits the card.
+          var PROMPT = D.prompt.length > 140 ? D.prompt.slice(0, 139) + "…" : D.prompt;
+          var T0 = 0.75;
+          var T_SENT = 5.2;
+          var budget = 3.4; // typing must finish by T0 + budget
+          var spaces = (PROMPT.match(/ /g) || []).length;
+          var scale = Math.min(1, budget / (0.031 * (PROMPT.length - spaces) + 0.072 * spaces));
+          var CHAR_GAP = 0.031 * scale;
+          var SPACE_GAP = 0.072 * scale;
+          var TIMES = [];
+          var t = T0;
+          for (var i = 0; i < PROMPT.length; i++) {
+            TIMES.push(t);
+            t += PROMPT.charAt(i) === " " ? SPACE_GAP : CHAR_GAP;
+          }
+          var T_END = TIMES[TIMES.length - 1];
+
+          // Break lines at word boundaries up front so a word never jumps lines while typing.
+          var MAX_COLS = 28;
+          var lines = [];
+          var cur = "";
+          PROMPT.split(" ").forEach(function (w) {
+            if (!cur) cur = w;
+            else if ((cur + " " + w).length <= MAX_COLS) cur += " " + w;
+            else { lines.push(cur); cur = w; }
+          });
+          if (cur) lines.push(cur);
+          var DISPLAY = lines.join("\n");
+          function shownAt(time) { var n = 0; while (n < TIMES.length && TIMES[n] <= time) n++; return n; }
+
+          tl.fromTo("#s1-grid", { y: 0 }, { y: -30, duration: DUR, ease: "none" }, 0);
+          tl.fromTo("#s1-glow", { opacity: 0, scale: 0.85 }, { opacity: 0.28, scale: 1, duration: 1.0, ease: "power2.out" }, 0);
+          var glow = document.getElementById("s1-glow");
+          var breathe = { p: 0 };
+          tl.to(breathe, { p: Math.PI * 4, duration: DUR - 1.0, ease: "none", onUpdate: function () {
+            var s = Math.sin(breathe.p);
+            glow.style.opacity = String(0.28 + s * 0.04);
+            glow.style.transform = "scale(" + (1 + s * 0.02) + ")";
+          } }, 1.0);
+
+          tl.fromTo("#s1-top", { opacity: 0 }, { opacity: 1, duration: 0.35, ease: "power2.out" }, 0.05);
+          tl.fromTo("#s1-rule", { scaleX: 0 }, { scaleX: 1, duration: 0.6, ease: "power3.out" }, 0.05);
+          tl.fromTo("#s1-h1", { scale: 0, opacity: 0, y: 24 }, { scale: 1, opacity: 1, y: 0, duration: 0.55, ease: "power3.out" }, 0.15);
+          tl.fromTo("#s1-h2", { scale: 0, opacity: 0, y: 24 }, { scale: 1, opacity: 1, y: 0, duration: 0.55, ease: "power3.out" }, 4.1);
+          tl.fromTo("#s1-term", { y: 40, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power3.out" }, 0.35);
+          tl.fromTo("#s1-sent", { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.4, ease: "power3.out" }, T_SENT);
+
+          var textEl = document.getElementById("s1-text");
+          var cursorEl = document.getElementById("s1-cursor");
+          var BLINK_CYCLES = 8;
+          var driver = { t: 0 };
+          tl.to(driver, { t: DUR, duration: DUR, ease: "none", onUpdate: function () {
+            var now = driver.t;
+            var s = DISPLAY.slice(0, shownAt(now));
+            if (textEl.textContent !== s) textEl.textContent = s;
+            var typing = now >= T0 - 0.05 && now <= T_END + 0.25;
+            var on = Math.sin((now / DUR) * Math.PI * 2 * BLINK_CYCLES) > 0;
+            cursorEl.style.opacity = typing || on ? "1" : "0";
+            cursorEl.style.background = now >= T_SENT ? "#4fd18b" : "#e6efe9";
+          } }, 0);
+
+          window.__timelines["s1-ask"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

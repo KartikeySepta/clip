@@ -1,0 +1,32 @@
+{
+  "repo": "KartikeySepta/agent-undo",
+  "date": "2026-10-04",
+  "prompt": "Okay Plan make it like other skill in this fodler i want that level skill",
+  "minutes": 22,
+  "files": [
+    { "file": "src/clone.ts", "kind": "new", "added": 88, "removed": 0, "clock": "04:39" },
+    { "file": "src/snapshot.ts", "kind": "changed", "added": 183, "removed": 77, "clock": "05:18" }
+  ],
+  "codeLines": [
+    "// Node has no clonefile binding; koffi (optional dependency) gives us one without a compiler.",
+    "clonefileFn = koffi",
+    "    .load('/usr/lib/libSystem.B.dylib')",
+    "    .func('int clonefile(const char *src, const char *dst, uint32_t flags)') as ClonefileFn;"
+  ],
+  "tests": [
+    { "clock": "06:42", "passed": 13, "failed": 6, "total": 19, "failingNames": ["revert without --yes only previews", "list, diff and revert --only", "prune keeps named snapshots and the newest N unnamed", "--version matches package.json", "MCP server exposes the four tools and they work end to end", "copy fallback honours the size guard and leaves no partial snapshot"] },
+    { "clock": "07:06", "passed": 19, "failed": 0, "total": 19, "failingNames": [] },
+    { "clock": "09:09", "passed": 18, "failed": 2, "total": 20, "failingNames": ["a revert that fails mid-restore rolls back and leaves the project unchanged", "copy fallback honours the size guard and leaves no partial snapshot"], "isNew": true },
+    { "clock": "09:26", "passed": 20, "failed": 0, "total": 20, "failingNames": [] },
+    { "clock": "10:33", "passed": 21, "failed": 0, "total": 21, "failingNames": [] },
+    { "clock": "16:50", "passed": 34, "failed": 1, "total": 35, "failingNames": ["mode, stats and doctor"], "isNew": true },
+    { "clock": "17:06", "passed": 35, "failed": 0, "total": 35, "failingNames": [] }
+  ],
+  "moreRuns": 0,
+  "commits": [
+    { "hash": "67134ce", "subject": "feat(engine): directory clonefile, ignore file, partial revert, lock, bundles" },
+    { "hash": "0d03a8c", "subject": "feat(plugin): Claude Code plugin with skill family, levels and hooks" },
+    { "hash": "e4ce386", "subject": "chore: CI matrix, bundle freshness check, version sync, benchmark, docs" }
+  ],
+  "redCount": 3
+}

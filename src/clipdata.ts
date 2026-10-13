@@ -56,10 +56,12 @@ export function buildClipData(e: ScoredEpisode, meta: { repo: string; home: stri
     const summary = e.tests[i];
     if (isRed(runs[i], summary)) redCount++;
     if (!summary) continue;
-    const isNew = summary.failingNames.some((n) => !seenFailing.has(n));
+    // A failure is "new" only after the first run, and new names go first so the tag lands on one of them.
+    const fresh = summary.failingNames.filter((n) => !seenFailing.has(n));
+    const old = summary.failingNames.filter((n) => seenFailing.has(n));
     summary.failingNames.forEach((n) => seenFailing.add(n));
-    const state: TestState = { clock: clockSince(e.startedAt, runs[i].at), ...summary };
-    if (isNew) state.isNew = true;
+    const state: TestState = { clock: clockSince(e.startedAt, runs[i].at), ...summary, failingNames: [...fresh, ...old] };
+    if (states.length > 0 && fresh.length > 0) state.isNew = true;
     states.push(state);
   }
 

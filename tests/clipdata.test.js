@@ -18,7 +18,7 @@ test('builds the clip facts from the red→green fixture', () => {
     ['src/clone.ts', 'new', 2, 0, '01:06'],
     ['src/snapshot.ts', 'changed', 3, 1, '02:06'],
   ]);
-  assert.deepStrictEqual(d.tests[0], { clock: '04:12', passed: 8, failed: 1, total: 9, failingNames: ['copy fallback honours the size guard'], isNew: true });
+  assert.deepStrictEqual(d.tests[0], { clock: '04:12', passed: 8, failed: 1, total: 9, failingNames: ['copy fallback honours the size guard'] });
   assert.strictEqual(d.tests[1].failed, 0);
   assert.strictEqual(d.redCount, 1);
   assert.strictEqual(d.moreRuns, 0);

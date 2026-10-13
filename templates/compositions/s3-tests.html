@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="UTF-8" /></head>
+  <body>
+    <template id="s3-tests-template">
+      <style>
+        #s3-root { position: absolute; inset: 0; overflow: hidden; background: #0b1310; color: #e6efe9; font-family: "JetBrains Mono", monospace; }
+        #s3-grid { position: absolute; left: -60px; top: -60px; width: 1200px; height: 1320px; background-image: linear-gradient(#15211c 2px, transparent 2px), linear-gradient(90deg, #15211c 2px, transparent 2px); background-size: 60px 60px; }
+        #s3-root .glow { position: absolute; width: 1100px; height: 1100px; left: -380px; top: -40px; border-radius: 50%; opacity: 0; }
+        #s3-glow-red { background: radial-gradient(circle, rgba(255, 107, 94, 0.6) 0%, rgba(255, 107, 94, 0) 62%); }
+        #s3-glow-green { background: radial-gradient(circle, rgba(79, 209, 139, 0.6) 0%, rgba(79, 209, 139, 0) 62%); }
+        #s3-root .top { position: absolute; left: 72px; right: 72px; top: 64px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+        #s3-root .top-label { font-size: 24px; color: #8da399; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 700px; }
+        #s3-root .clock-wrap { display: flex; align-items: baseline; gap: 14px; }
+        #s3-root .clock-label { font-size: 24px; color: #8da399; }
+        #s3-clock { font-size: 40px; font-weight: 700; font-variant-numeric: tabular-nums; }
+        #s3-root .rule { position: absolute; left: 72px; top: 136px; width: 936px; height: 2px; background: #1e2b25; }
+        #s3-root .head { position: absolute; left: 72px; top: 178px; width: 936px; }
+        #s3-root .h { font-family: "Archivo Black", sans-serif; font-size: 90px; line-height: 1.06; letter-spacing: -0.035em; white-space: nowrap; transform-origin: 0% 60%; }
+        #s3-root .red { color: #ff6b5e; }
+        #s3-root .green { color: #4fd18b; }
+        #s3-meter { position: absolute; left: 72px; top: 396px; width: 936px; height: 230px; }
+        #s3-root .mstate { position: absolute; left: 0; top: 0; display: flex; align-items: center; gap: 32px; opacity: 0; transform-origin: 0% 50%; }
+        #s3-root .icon { display: block; width: 124px; height: 124px; flex-shrink: 0; }
+        #s3-root .mnum { font-size: 150px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+        #s3-root .mlabel { font-size: 38px; margin-top: 12px; }
+        #s3-root .glitch-stack { display: grid; }
+        #s3-root .glitch-base, #s3-root .glitch-copy { grid-area: 1 / 1; }
+        #s3-root .glitch-base { z-index: 2; }
+        #s3-root .glitch-copy { z-index: 1; opacity: 0; mix-blend-mode: screen; will-change: transform; }
+        #s3-root .glitch-copy.warm { color: #ffb86b; }
+        #s3-root .glitch-copy.cool { color: #6bd8ff; }
+        #s3-root .bar { position: absolute; left: 72px; top: 654px; width: 936px; }
+        #s3-root .track { width: 936px; height: 18px; border-radius: 9px; background: #17231e; overflow: hidden; }
+        #s3-fill { width: 100%; height: 100%; background: #4fd18b; transform-origin: 0% 50%; }
+        #s3-root .bar-cap { display: flex; justify-content: space-between; margin-top: 14px; font-size: 24px; color: #8da399; }
+        #s3-root .names { position: absolute; left: 72px; top: 750px; width: 936px; opacity: 0; }
+        #s3-root .nm { display: flex; align-items: center; gap: 16px; font-size: 30px; line-height: 1.55; opacity: 0; }
+        #s3-root .nm-text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        #s3-root .nm-x { display: block; width: 30px; height: 30px; flex-shrink: 0; }
+        #s3-root .more { color: #8da399; padding-left: 46px; }
+        #s3-root .tag { flex-shrink: 0; font-size: 24px; color: #ff6b5e; border: 2px solid #ff6b5e; border-radius: 10px; padding: 2px 12px; }
+        #s3-final { position: absolute; left: 72px; top: 772px; font-family: "Archivo Black", sans-serif; font-size: 80px; letter-spacing: -0.035em; white-space: nowrap; opacity: 0; }
+      </style>
+      <div id="s3-root" data-composition-id="s3-tests" data-width="1080" data-height="1080" data-duration="10.5">
+        <div id="s3-grid" data-layout-allow-overflow></div>
+        <div class="glow" id="s3-glow-red" data-layout-allow-overflow></div>
+        <div class="glow" id="s3-glow-green" data-layout-allow-overflow></div>
+        <div class="top">
+          <div class="top-label" id="s3-label"></div>
+          <div class="clock-wrap"><span class="clock-label">session</span><span id="s3-clock">00:00</span></div>
+        </div>
+        <div class="rule"></div>
+        <div class="head">
+          <div class="h" id="s3-h1"></div>
+          <div class="h" id="s3-h2"></div>
+        </div>
+        <div id="s3-meter"></div>
+        <div class="bar">
+          <div class="track"><div id="s3-fill"></div></div>
+          <div class="bar-cap"><span id="s3-cap-left">test suite</span><span id="s3-cap-right"></span></div>
+        </div>
+        <div id="s3-names"></div>
+        <div id="s3-final"></div>
+      </div>
+      <script>
+        window.CLIP = /*__CLIP_DATA__*/null;
+        (function () {
+          var D = window.CLIP;
+          var tests = D.tests;
+          var N = tests.length;
+          var DUR = Math.max(4, Math.round((0.5 + 1.4 * N + 1.6) * 10) / 10);
+          var tl = gsap.timeline({ paused: true });
+          var root = document.getElementById("s3-root");
+          root.setAttribute("data-duration", String(DUR));
+          var MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+          var d = D.date.split("-");
+          document.getElementById("s3-label").textContent = D.repo.split("/").pop() + " · real Claude Code session · " + MONTHS[+d[1] - 1] + " " + (+d[2]);
+
+          function secs(clock) { var p = clock.split(":"); return (+p[0]) * 60 + (+p[1]); }
+          function fmt(sec) { var s = Math.floor(sec); var m = Math.floor(s / 60); var r = s % 60; return (m < 10 ? "0" : "") + m + ":" + (r < 10 ? "0" : "") + r; }
+          function esc(s) { return String(s).replace(/[&<>]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]; }); }
+          var X_ICON = '<svg class="icon" viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="none" stroke="#ff6b5e" stroke-width="8" /><path d="M35 35 L65 65 M65 35 L35 65" stroke="#ff6b5e" stroke-width="10" stroke-linecap="round" /></svg>';
+          var OK_ICON = '<svg class="icon" viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="none" stroke="#4fd18b" stroke-width="8" /><path d="M30 52 L45 67 L72 37" fill="none" stroke="#4fd18b" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" /></svg>';
+          var NM_X = '<svg class="nm-x" viewBox="0 0 30 30"><path d="M7 7 L23 23 M23 7 L7 23" stroke="#ff6b5e" stroke-width="4" stroke-linecap="round" /></svg>';
+
+          // Headline from the real red count.
+          var h1 = document.getElementById("s3-h1"), h2 = document.getElementById("s3-h2");
+          if (D.redCount > 0) { h1.textContent = "Tests went red"; h2.textContent = D.redCount + (D.redCount === 1 ? " time." : " times."); h2.classList.add("red"); }
+          else { h1.textContent = "Tests ran"; h2.textContent = "green."; h2.classList.add("green"); }
+
+          // One meter state per test run, at 1.4 s intervals. Red states glitch; green ones settle.
+          var maxTotal = tests.reduce(function (m, t) { return Math.max(m, t.total); }, 0) || 1;
+          document.getElementById("s3-cap-right").textContent = maxTotal + " tests";
+          if (D.moreRuns > 0) document.getElementById("s3-cap-left").textContent = "test suite · +" + D.moreRuns + " more runs";
+          var meter = document.getElementById("s3-meter");
+          var namesEl = document.getElementById("s3-names");
+          var STATES = tests.map(function (t, i) {
+            var red = t.failed > 0;
+            var num = red && i === 0 && t.failed < t.total && t.passed === 0 ? String(t.failed) : t.passed + "/" + t.total;
+            var label = red ? (t.failed + " failing") : "passing";
+            var numHtml = red
+              ? '<div class="mnum glitch-stack" id="s3-g' + i + '"><span class="glitch-copy warm" aria-hidden="true">' + num + '</span><span class="glitch-copy cool" aria-hidden="true">' + num + '</span><span class="glitch-base red">' + num + "</span></div>"
+              : '<div class="mnum green">' + num + "</div>";
+            meter.insertAdjacentHTML("beforeend", '<div class="mstate" id="s3-m' + i + '">' + (red ? X_ICON : OK_ICON) + "<div>" + numHtml + '<div class="mlabel ' + (red ? "red" : "green") + '">' + label + "</div></div></div>");
+            var names = null;
+            if (red && (t.failingNames.length || t.isNew)) {
+              names = "s3-n" + i;
+              var shown = t.failingNames.slice(0, 3);
+              var html = shown.map(function (n, j) {
+                var tag = t.isNew && j === 0 ? '<span class="tag">new test</span>' : NM_X;
+                return '<div class="nm">' + tag + '<span class="nm-text">' + esc(n) + "</span></div>";
+              }).join("");
+              if (t.failingNames.length > 3) html += '<div class="nm more"><span class="nm-text">+ ' + (t.failingNames.length - 3) + " more</span></div>";
+              namesEl.insertAdjacentHTML("beforeend", '<div class="names" id="' + names + '">' + html + "</div>");
+            }
+            return { id: "s3-m" + i, at: 0.5 + i * 1.4, color: red ? "red" : "green", stack: red ? "s3-g" + i : null, names: names, fill: t.passed / maxTotal, clock: secs(t.clock) };
+          });
+
+          // Clock holds on each state, then ramps 0.35 s before the next.
+          var CLOCK = [[0, N ? Math.max(0, STATES[0].clock - 84) : 0]];
+          STATES.forEach(function (s) { CLOCK.push([s.at - 0.35, CLOCK[CLOCK.length - 1][1]]); CLOCK.push([s.at, s.clock]); });
+          function clockAt(t) {
+            if (t <= CLOCK[0][0]) return CLOCK[0][1];
+            for (var i = 1; i < CLOCK.length; i++) if (t <= CLOCK[i][0]) { var a = CLOCK[i - 1], b = CLOCK[i]; return b[0] === a[0] ? b[1] : a[1] + ((b[1] - a[1]) * (t - a[0])) / (b[0] - a[0]); }
+            return CLOCK[CLOCK.length - 1][1];
+          }
+
+          tl.fromTo("#s3-grid", { y: -60 }, { y: -100, duration: DUR, ease: "none" }, 0);
+          tl.fromTo("#s3-h1", { scale: 0, opacity: 0, y: 24 }, { scale: 1, opacity: 1, y: 0, duration: 0.55, ease: "power3.out" }, 0.1);
+          tl.fromTo("#s3-h2", { scale: 0, opacity: 0, y: 24 }, { scale: 1, opacity: 1, y: 0, duration: 0.55, ease: "power3.out" }, 0.2);
+
+          function glitchHash(n) { var x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
+          function burst(stackId, start, dur) {
+            var copies = gsap.utils.toArray("#" + stackId + " .glitch-copy");
+            var amp = { a: 0 };
+            tl.set(amp, { a: 1 }, start);
+            tl.set(copies, { opacity: 0.75 }, start);
+            tl.to(amp, { a: 0, duration: dur, ease: "power3.in", onUpdate: function () {
+              var step = Math.floor(tl.time() / (1 / 24));
+              copies.forEach(function (el, layer) {
+                gsap.set(el, { x: (glitchHash(step * 13 + layer * 7) * 2 - 1) * 12 * amp.a, y: (glitchHash(step * 29 + layer * 11) * 2 - 1) * 4.2 * amp.a });
+              });
+            } }, start);
+            tl.set(copies, { x: 0, y: 0, opacity: 0 }, start + dur);
+          }
+          function glowTo(color, at) {
+            tl.to("#s3-glow-red", { opacity: color === "red" ? 0.3 : 0, duration: 0.35, ease: "power2.out" }, at);
+            tl.to("#s3-glow-green", { opacity: color === "green" ? 0.3 : 0, duration: 0.35, ease: "power2.out" }, at);
+          }
+          function cascade(groupId, at) {
+            tl.set("#" + groupId, { opacity: 1 }, at);
+            gsap.utils.toArray("#" + groupId + " .nm").forEach(function (el, i) {
+              var t = at + 0.1 + i * 0.12;
+              tl.set(el, { opacity: 1, y: 40 }, t);
+              tl.to(el, { y: 0, duration: 0.15, ease: "power4.out" }, t);
+            });
+          }
+
+          tl.set("#s3-fill", { scaleX: 0 }, 0);
+          var prevFill = 0;
+          STATES.forEach(function (s, i) {
+            var prev = STATES[i - 1];
+            if (prev) { tl.set("#" + prev.id, { opacity: 0 }, s.at); if (prev.names) tl.set("#" + prev.names, { opacity: 0 }, s.at); }
+            tl.set("#" + s.id, { opacity: 1 }, s.at);
+            tl.fromTo("#" + s.id, { scale: s.color === "green" ? 0.86 : 1.06 }, { scale: 1, duration: 0.4, ease: "power3.out" }, s.at);
+            if (s.stack) { burst(s.stack, s.at, 0.3); burst(s.stack, s.at + 0.5, 0.16); }
+            if (s.names) cascade(s.names, s.at);
+            glowTo(s.color, s.at);
+            tl.set("#s3-fill", { backgroundColor: s.color === "green" ? "#4fd18b" : "#ff6b5e" }, s.at);
+            tl.fromTo("#s3-fill", { scaleX: prevFill }, { scaleX: s.fill, duration: 0.5, ease: "power2.out", immediateRender: false }, s.at);
+            prevFill = s.fill;
+          });
+
+          // Payoff line after the last state.
+          var last = STATES[N - 1];
+          var finalEl = document.getElementById("s3-final");
+          if (last) {
+            var green = last.color === "green";
+            finalEl.textContent = green ? (D.redCount > 0 ? "Green every time." : "All green.") : "Still red at the cut.";
+            finalEl.classList.add(green ? "green" : "red");
+            if (last.names) tl.set("#" + last.names, { opacity: 0 }, last.at + 0.45);
+            tl.set("#s3-final", { opacity: 1, y: 70 }, last.at + 0.45);
+            tl.to("#s3-final", { y: 0, duration: 0.2, ease: "power4.out" }, last.at + 0.45);
+          }
+
+          var clockEl = document.getElementById("s3-clock");
+          var driver = { t: 0 };
+          tl.to(driver, { t: DUR, duration: DUR, ease: "none", onUpdate: function () {
+            var c = fmt(clockAt(driver.t));
+            if (clockEl.textContent !== c) clockEl.textContent = c;
+          } }, 0);
+
+          window.__timelines["s3-tests"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="UTF-8" /></head>
+  <body>
+    <template id="s4-end-template">
+      <style>
+        #s4-root { position: absolute; inset: 0; overflow: hidden; background: #0b1310; color: #e6efe9; font-family: "JetBrains Mono", monospace; }
+        #s4-grid { position: absolute; left: -60px; top: -60px; width: 1200px; height: 1320px; background-image: linear-gradient(#15211c 2px, transparent 2px), linear-gradient(90deg, #15211c 2px, transparent 2px); background-size: 60px 60px; }
+        #s4-root .glow { position: absolute; width: 1100px; height: 1100px; border-radius: 50%; background: radial-gradient(circle, rgba(79, 209, 139, 0.6) 0%, rgba(79, 209, 139, 0) 62%); opacity: 0; }
+        #s4-glow-a { left: -460px; top: -260px; }
+        #s4-glow-b { left: -300px; top: -60px; }
+        #s4-a, #s4-b { position: absolute; inset: 0; }
+        #s4-b { opacity: 0; }
+        #s4-root .top { position: absolute; left: 72px; right: 72px; top: 64px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+        #s4-root .top-label { font-size: 24px; color: #8da399; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 700px; }
+        #s4-root .clock-wrap { display: flex; align-items: baseline; gap: 14px; }
+        #s4-root .clock-label { font-size: 24px; color: #8da399; }
+        #s4-clock { font-size: 40px; font-weight: 700; font-variant-numeric: tabular-nums; }
+        #s4-root .rule { position: absolute; left: 72px; top: 136px; width: 936px; height: 2px; background: #1e2b25; }
+        #s4-hero { position: absolute; left: 72px; top: 168px; display: flex; align-items: baseline; gap: 24px; }
+        #s4-num { display: inline-block; min-width: 290px; font-size: 240px; font-weight: 700; line-height: 1; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; color: #4fd18b; transform-origin: 0% 100%; }
+        #s4-root .unit { font-family: "Archivo Black", sans-serif; font-size: 96px; letter-spacing: -0.03em; }
+        #s4-sub { position: absolute; left: 72px; top: 428px; font-size: 34px; color: #8da399; opacity: 0; }
+        #s4-root .rows { position: absolute; left: 72px; top: 506px; width: 936px; }
+        #s4-root .row { display: flex; align-items: center; gap: 18px; font-size: 36px; line-height: 1.5; margin-top: 10px; opacity: 0; }
+        #s4-root .ck { display: block; width: 36px; height: 36px; flex-shrink: 0; }
+        #s4-root .cm { font-size: 28px; line-height: 1.5; color: #8da399; padding-left: 54px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0; }
+        #s4-root .hash { color: #e6c46b; }
+        #s4-mark { position: absolute; left: 72px; top: 290px; display: flex; align-items: center; gap: 34px; transform-origin: 0% 50%; }
+        #s4-root .dot { display: block; width: 72px; height: 72px; border-radius: 50%; background: #4fd18b; }
+        #s4-root .word { font-size: 180px; font-weight: 700; line-height: 1; letter-spacing: -0.05em; }
+        #s4-root .tag { position: absolute; left: 72px; font-size: 50px; line-height: 1.2; opacity: 0; }
+        #s4-t1 { top: 532px; }
+        #s4-t2 { top: 596px; }
+        #s4-root .arrow { color: #4fd18b; }
+        #s4-cmd { position: absolute; left: 72px; top: 712px; font-size: 30px; font-weight: 700; color: #4fd18b; border: 2px solid #4fd18b; border-radius: 12px; padding: 8px 20px; transform-origin: 0% 50%; opacity: 0; }
+        #s4-root .foot { position: absolute; left: 72px; font-size: 24px; color: #8da399; opacity: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 936px; }
+        #s4-f1 { top: 900px; }
+        #s4-f2 { top: 936px; }
+      </style>
+      <div id="s4-root" data-composition-id="s4-end" data-width="1080" data-height="1080" data-duration="7.5">
+        <div id="s4-grid" data-layout-allow-overflow></div>
+        <div id="s4-a">
+          <div class="glow" id="s4-glow-a" data-layout-allow-overflow></div>
+          <div class="top">
+            <div class="top-label" id="s4-label"></div>
+            <div class="clock-wrap"><span class="clock-label">session</span><span id="s4-clock">00:00</span></div>
+          </div>
+          <div class="rule"></div>
+          <div id="s4-hero"><span id="s4-num">0</span><span class="unit">min</span></div>
+          <div id="s4-sub">from one prompt to done</div>
+          <div class="rows" id="s4-rows"></div>
+        </div>
+        <div id="s4-b">
+          <div class="glow" id="s4-glow-b" data-layout-allow-overflow></div>
+          <div id="s4-mark"><span class="dot"></span><span class="word">clip</span></div>
+          <div class="tag" id="s4-t1">Your Claude Code session</div>
+          <div class="tag" id="s4-t2"><span class="arrow">→</span> a 30-second video.</div>
+          <div id="s4-cmd">npx @atpes/clip</div>
+          <div class="foot" id="s4-f1">made from a real session of</div>
+          <div class="foot" id="s4-f2"></div>
+        </div>
+      </div>
+      <script>
+        window.CLIP = /*__CLIP_DATA__*/null;
+        (function () {
+          var D = window.CLIP;
+          var DUR = 7.5;
+          var CUT = 4.3;
+          var tl = gsap.timeline({ paused: true });
+          var MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+          var d = D.date.split("-");
+          document.getElementById("s4-label").textContent = D.repo.split("/").pop() + " · real Claude Code session · " + MONTHS[+d[1] - 1] + " " + (+d[2]);
+          document.getElementById("s4-f2").textContent = "github.com/" + D.repo;
+
+          function secs(clock) { var p = clock.split(":"); return (+p[0]) * 60 + (+p[1]); }
+          function fmt(sec) { var s = Math.floor(sec); var m = Math.floor(s / 60); var r = s % 60; return (m < 10 ? "0" : "") + m + ":" + (r < 10 ? "0" : "") + r; }
+          function esc(s) { return String(s).replace(/[&<>]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]; }); }
+          var CK = '<svg class="ck" viewBox="0 0 36 36"><path d="M8 19 L15 26 L29 11" fill="none" stroke="#4fd18b" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" /></svg>';
+
+          // Receipt rows from the data: last test state, commits (≤3 subjects), file count.
+          var rowsEl = document.getElementById("s4-rows");
+          var ids = [];
+          function row(html, cls) { var id = "s4-x" + ids.length; rowsEl.insertAdjacentHTML("beforeend", '<div class="' + cls + '" id="' + id + '">' + html + "</div>"); ids.push({ id: id, cls: cls }); }
+          var last = D.tests[D.tests.length - 1];
+          if (last) row(CK + "<span>" + last.passed + "/" + last.total + " tests passing</span>", "row");
+          if (D.commits.length) {
+            row(CK + "<span>" + D.commits.length + (D.commits.length === 1 ? " commit" : " commits") + "</span>", "row");
+            D.commits.slice(0, 3).forEach(function (c) { row('<span class="hash">' + esc(c.hash) + "</span> " + esc(c.subject), "cm"); });
+          }
+          var added = D.files.reduce(function (n, f) { return n + f.added; }, 0);
+          if (D.files.length) row(CK + "<span>" + D.files.length + (D.files.length === 1 ? " file, " : " files, ") + "+" + added + " lines</span>", "row");
+
+          var lastClock = last ? secs(last.clock) : 0;
+          var endClock = Math.max(lastClock, D.minutes * 60);
+          function clockAt(t) { if (t <= 0.15) return lastClock; if (t >= 1.0) return endClock; return lastClock + ((endClock - lastClock) * (t - 0.15)) / 0.85; }
+
+          tl.fromTo("#s4-grid", { y: -100 }, { y: -130, duration: DUR, ease: "none" }, 0);
+          tl.fromTo("#s4-glow-a", { opacity: 0, scale: 0.85 }, { opacity: 0.26, scale: 1, duration: 1.2, ease: "power2.out" }, 0.2);
+
+          var numEl = document.getElementById("s4-num");
+          var count = { v: 0 };
+          tl.to(count, { v: D.minutes, duration: 1.4, ease: "power3.out", onUpdate: function () {
+            var s = String(Math.round(count.v));
+            if (numEl.textContent !== s) numEl.textContent = s;
+          } }, 0.2);
+          tl.fromTo("#s4-num", { scale: 0.5 }, { scale: 1, duration: 1.4, ease: "power3.out" }, 0.2);
+          tl.fromTo("#s4-sub", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.45, ease: "power2.out" }, 0.7);
+
+          function whip(sel, at, dy, dur) { tl.set(sel, { opacity: 1, y: dy }, at); tl.to(sel, { y: 0, duration: dur, ease: "power4.out" }, at); }
+          var at = 1.5;
+          ids.forEach(function (r) { var light = r.cls === "cm"; whip("#" + r.id, at, light ? 36 : 60, light ? 0.13 : 0.18); at += light ? 0.12 : 0.25; });
+
+          tl.set("#s4-a", { opacity: 0 }, CUT);
+          tl.set("#s4-b", { opacity: 1 }, CUT);
+          tl.fromTo("#s4-glow-b", { opacity: 0, scale: 0.85 }, { opacity: 0.3, scale: 1, duration: 0.7, ease: "power2.out" }, CUT);
+          var glowB = document.getElementById("s4-glow-b");
+          var breathe = { p: 0 };
+          tl.to(breathe, { p: Math.PI * 2, duration: DUR - CUT - 0.7, ease: "none", onUpdate: function () {
+            var s = Math.sin(breathe.p);
+            glowB.style.opacity = String(0.3 + s * 0.04);
+            glowB.style.transform = "scale(" + (1 + s * 0.02) + ")";
+          } }, CUT + 0.7);
+          tl.fromTo("#s4-mark", { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.6, ease: "power3.out" }, CUT + 0.1);
+          whip("#s4-t1", CUT + 0.55, 50, 0.16);
+          whip("#s4-t2", CUT + 0.7, 50, 0.16);
+          tl.fromTo("#s4-cmd", { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.45, ease: "power3.out" }, CUT + 1.05);
+          whip("#s4-f1", CUT + 1.35, 30, 0.12);
+          whip("#s4-f2", CUT + 1.45, 30, 0.12);
+
+          var clockEl = document.getElementById("s4-clock");
+          var driver = { t: 0 };
+          tl.to(driver, { t: DUR, duration: DUR, ease: "none", onUpdate: function () {
+            var c = fmt(clockAt(driver.t));
+            if (clockEl.textContent !== c) clockEl.textContent = c;
+          } }, 0);
+
+          window.__timelines["s4-end"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>
