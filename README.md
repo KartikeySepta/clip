@@ -6,17 +6,43 @@
 
 That's a real session: one prompt, 22 minutes, tests went red three times and came back green every time, 35/35 passing, 3 commits. Every number on screen comes from the session's own transcript. ([Full-quality MP4](clip-demo.mp4))
 
+## Install
+
+```bash
+npx @atpes/clip            # run it without installing
+npm i -g @atpes/clip       # or install the `clip` command
+```
+
+Needs Node 22+ and `ffmpeg` on your PATH. The first render downloads HyperFrames and a headless Chrome (about a minute).
+
+## Use
+
+In any project folder you've used Claude Code in:
+
+```bash
+clip                       # best moment of the latest session → ./clip.mp4
+clip --list                # every session and its candidate moments, scored
+clip 14ac5b --episode 2    # pick a session (id prefix) and a moment (# from --list)
+clip --out demo.mp4        # choose the output path
+clip --prompt "text"       # replace the prompt shown on screen
+clip --private-ok          # render even if the repo isn't public on GitHub
+```
+
+Clip picks the episode (one prompt and the work that followed it) with the best story: edits, a test run that went red and came back green, a sensible length. The clip shows the prompt as typed, the files changed, every test run with its real time offset, the commits, and the total minutes.
+
+## Privacy
+
+- Runs entirely on your machine. Nothing is uploaded.
+- Reads only `~/.claude/projects/<this folder>/*.jsonl`, the transcripts Claude Code already saves.
+- Before anything renders, your home directory becomes `~`, project paths become relative, and key-shaped strings (`sk-…`, `ghp_…`, `AKIA…`, JWTs, long base64) become `[redacted]`. Lines mentioning `password`, `secret` or `token=` are dropped.
+- If the folder's GitHub repo is not public (or `gh` can't tell), Clip stops and asks for `--private-ok`. A clip shows your prompt, file names and a few code lines; decide before you post it.
+
+## What it reads
+
+Test results come from the runner's own summary, not the command's exit code: node `--test`, jest, vitest and pytest. Runs it can't read are left out of the clip. File changes come from Claude's Edit/Write calls and from shell commands that changed files (`sed`, heredocs, codegen).
+
 ## Status
 
-Not built yet. This clip was made by hand to find out whether anyone wants the tool.
+v0. One square format, silent, one look. Built from a hand-made demo of [agent-undo](https://github.com/KartikeySepta/agent-undo); rendered with [HyperFrames](https://github.com/heygen-com/hyperframes).
 
-If you'd use it, **star or watch this repo**. That's the signal I'm waiting for.
-
-## What it would do
-
-- Read a saved Claude Code session from `~/.claude/projects/`. No screen recording.
-- Pick the moments that matter: the ask, the edits, the test runs, the result.
-- Render a short video on your machine with [HyperFrames](https://github.com/heygen-com/hyperframes).
-- Hide secrets, keys and home paths before anything renders. Nothing leaves your machine.
-
-Made from a session of [agent-undo](https://github.com/KartikeySepta/agent-undo).
+MIT © Kartikey Septa
