@@ -110,7 +110,7 @@ function scoreEpisode(e) {
   return { ...e, score, redToGreen, tests };
 }
 function pickEpisode(episodes) {
-  const eligible = episodes.filter((e) => e.events.some((ev) => ev.kind === "test") && e.events.some((ev) => ev.kind !== "test" && ev.kind !== "commit")).map(scoreEpisode).sort((a, b) => b.score - a.score);
+  const eligible = episodes.filter((e) => e.events.some((ev) => ev.kind !== "test" && ev.kind !== "commit")).map(scoreEpisode).filter((e) => e.tests.some((t) => t !== null)).sort((a, b) => b.score - a.score);
   return eligible[0] ?? null;
 }
 
@@ -183,8 +183,8 @@ function buildClipData(e, meta) {
   let redCount = 0;
   for (let i = 0; i < runs.length; i++) {
     const summary = e.tests[i];
-    if (isRed(runs[i], summary)) redCount++;
     if (!summary) continue;
+    if (isRed(runs[i], summary)) redCount++;
     const fresh = summary.failingNames.filter((n) => !seenFailing.has(n));
     const old = summary.failingNames.filter((n) => seenFailing.has(n));
     summary.failingNames.forEach((n) => seenFailing.add(n));

@@ -37,6 +37,14 @@ test('caps test states at 8 and counts the rest', () => {
   assert.strictEqual(d.moreRuns, 3);
 });
 
+test('a failing run with unparsable output is not counted as red', () => {
+  const e = episode();
+  const unparsed = { kind: 'test', command: 'npm test', exitOk: false, output: 'segfault', at: e.endedAt };
+  const d = buildClipData(scoreEpisode({ ...e, events: [...e.events, unparsed] }), meta);
+  assert.strictEqual(d.redCount, 1);
+  assert.strictEqual(d.tests.length, 2);
+});
+
 test('a planted secret in a patch never reaches the data', () => {
   const e = episode();
   const leaky = { ...e, prompt: 'use key sk-abcdefghijklmnopqrst please', events: e.events };

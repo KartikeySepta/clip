@@ -23,6 +23,12 @@ test('pickEpisode is null when no episode has a test run', () => {
   assert.strictEqual(pickEpisode(parseTranscript(fx('no-tests.jsonl'))), null);
 });
 
+test('pickEpisode needs at least one test run with a readable summary', () => {
+  const e = parseTranscript(fx('red-green.jsonl'))[1];
+  const blind = e.events.map((ev) => (ev.kind === 'test' ? { ...ev, output: 'no summary here' } : ev));
+  assert.strictEqual(pickEpisode([{ ...e, events: blind }]), null);
+});
+
 test('a prompt over 400 characters loses the short-prompt bonus', () => {
   const e = parseTranscript(fx('red-green.jsonl'))[1];
   const long = { ...e, prompt: 'x'.repeat(500) };

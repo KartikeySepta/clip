@@ -53,9 +53,10 @@ export function buildClipData(e: ScoredEpisode, meta: { repo: string; home: stri
   const states: TestState[] = [];
   let redCount = 0;
   for (let i = 0; i < runs.length; i++) {
+    // A run whose output we cannot read is shown nowhere, so it must not count toward the headline either.
     const summary = e.tests[i];
-    if (isRed(runs[i], summary)) redCount++;
     if (!summary) continue;
+    if (isRed(runs[i], summary)) redCount++;
     // A failure is "new" only after the first run, and new names go first so the tag lands on one of them.
     const fresh = summary.failingNames.filter((n) => !seenFailing.has(n));
     const old = summary.failingNames.filter((n) => seenFailing.has(n));

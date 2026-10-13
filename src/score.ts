@@ -26,11 +26,12 @@ export function scoreEpisode(e: Episode): ScoredEpisode {
   return { ...e, score, redToGreen, tests };
 }
 
-/** Highest-scoring episode that has at least one edit and one test run; null when none qualifies. */
+/** Highest-scoring episode with at least one edit and one test run whose summary we can read; null when none qualifies. */
 export function pickEpisode(episodes: Episode[]): ScoredEpisode | null {
   const eligible = episodes
-    .filter((e) => e.events.some((ev) => ev.kind === 'test') && e.events.some((ev) => ev.kind !== 'test' && ev.kind !== 'commit'))
+    .filter((e) => e.events.some((ev) => ev.kind !== 'test' && ev.kind !== 'commit'))
     .map(scoreEpisode)
+    .filter((e) => e.tests.some((t) => t !== null))
     .sort((a, b) => b.score - a.score);
   return eligible[0] ?? null;
 }
