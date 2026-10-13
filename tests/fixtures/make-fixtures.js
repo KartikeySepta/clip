@@ -54,8 +54,17 @@ broken.splice(6, 0,
   prompt(2.7, 'Base directory for this skill: /home/dev/.claude/skills/x\n\n# Some skill\nDo things.'),
 );
 
+// Episode 2 of red-green with an interrupt line, a compaction summary and a meta line dropped in the middle.
+const interrupted = [...redGreen.slice(2)];
+interrupted.splice(3, 0,
+  prompt(2.3, '[Request interrupted by user for tool use]'),
+  { ...prompt(2.4, 'This session is being continued from a previous conversation that ran out of context. Summary: …'), isCompactSummary: true },
+  { ...prompt(2.45, 'some meta line'), isMeta: true },
+);
+
 const write = (name, lines) =>
   fs.writeFileSync(path.join(__dirname, name), lines.map((l) => (typeof l === 'string' ? l : JSON.stringify(l))).join('\n') + '\n');
 write('red-green.jsonl', redGreen);
 write('no-tests.jsonl', noTests);
 write('broken-lines.jsonl', broken);
+write('interrupted.jsonl', interrupted);

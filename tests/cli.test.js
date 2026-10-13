@@ -13,7 +13,7 @@ function world(sessions) {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'clip-cli-home-'));
   // realpath: process.cwd() resolves symlinks (macOS /var → /private/var), and Claude Code encodes that.
   const cwd = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'clip-cli-proj-')));
-  const dir = path.join(home, '.claude', 'projects', cwd.replace(/\//g, '-'));
+  const dir = path.join(home, '.claude', 'projects', cwd.replace(/[^a-zA-Z0-9]/g, '-'));
   fs.mkdirSync(dir, { recursive: true });
   const t = Date.now() / 1000;
   sessions.forEach((name, i) => {

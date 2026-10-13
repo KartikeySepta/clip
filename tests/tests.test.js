@@ -31,6 +31,25 @@ test('grep-filtered node output without the tests line still parses', () => {
   assert.deepStrictEqual(parseTestOutput('# pass 3\n# fail 1\n'), { passed: 3, failed: 1, total: 4, failingNames: [] });
 });
 
+test('all-failing jest and pytest runs still parse', () => {
+  assert.deepStrictEqual(parseTestOutput('Tests: 1 failed, 1 total\n'), { passed: 0, failed: 1, total: 1, failingNames: [] });
+  assert.deepStrictEqual(parseTestOutput('==== 2 failed in 0.12s ====\n'), { passed: 0, failed: 2, total: 2, failingNames: [] });
+});
+
+test('jest with todo and skipped groups in any order', () => {
+  assert.deepStrictEqual(parseTestOutput('Tests: 1 failed, 1 todo, 3 passed, 5 total\n'), { passed: 3, failed: 1, total: 5, failingNames: [] });
+  assert.deepStrictEqual(parseTestOutput('Tests: 2 skipped, 3 passed, 5 total\n'), { passed: 3, failed: 0, total: 5, failingNames: [] });
+});
+
+test('vitest summary', () => {
+  assert.deepStrictEqual(parseTestOutput(' Tests  1 failed | 5 passed (6)\n'), { passed: 5, failed: 1, total: 6, failingNames: [] });
+  assert.deepStrictEqual(parseTestOutput(' Tests  6 passed (6)\n'), { passed: 6, failed: 0, total: 6, failingNames: [] });
+});
+
+test('cargo test summary', () => {
+  assert.deepStrictEqual(parseTestOutput('test result: FAILED. 5 passed; 1 failed; 0 ignored\n'), { passed: 5, failed: 1, total: 6, failingNames: [] });
+});
+
 test('unknown output is null', () => {
   assert.strictEqual(parseTestOutput('hello'), null);
 });

@@ -54,17 +54,32 @@ var FORMATS = [
     re: /(?:# tests (\d+)\s*\n\s*(?:# suites \d+\s*\n\s*)?)?# pass (\d+)\s*\n\s*# fail (\d+)/g,
     pick: (m) => ({ total: m[1] ? +m[1] : void 0, passed: +m[2], failed: +m[3] })
   },
-  // jest / vitest
+  // jest: "Tests: 1 failed, 1 todo, 3 passed, 5 total" — groups in any order, any subset
   {
-    re: /Tests:\s+(?:(\d+) failed, )?(?:(\d+) skipped, )?(\d+) passed, (\d+) total/g,
-    pick: (m) => ({ failed: +(m[1] ?? 0), passed: +m[3], total: +m[4] })
+    re: /Tests:\s+((?:\d+ (?:failed|passed|skipped|todo|pending),? ?)+)(\d+) total/g,
+    pick: (m) => ({ ...countsFrom(m[1]), total: +m[2] })
   },
-  // pytest
+  // vitest: " Tests  1 failed | 5 passed (6)"
   {
-    re: /=+ (?:(\d+) failed, )?(\d+) passed[^=\n]* in [\d.]+s/g,
-    pick: (m) => ({ failed: +(m[1] ?? 0), passed: +m[2] })
+    re: /Tests\s+((?:\d+ (?:failed|passed|skipped|todo)(?: \| )?)+)\s*\((\d+)\)/g,
+    pick: (m) => ({ ...countsFrom(m[1]), total: +m[2] })
+  },
+  // pytest: "==== 1 failed, 34 passed in 2.1s ===="
+  {
+    re: /=+ ((?:\d+ (?:failed|passed|skipped|error|errors|xfailed|xpassed|warnings?),? ?)+)in [\d.]+s/g,
+    pick: (m) => countsFrom(m[1])
+  },
+  // cargo: "test result: FAILED. 5 passed; 1 failed; 0 ignored"
+  {
+    re: /test result: \w+\. (\d+) passed; (\d+) failed/g,
+    pick: (m) => ({ passed: +m[1], failed: +m[2] })
   }
 ];
+function countsFrom(groups) {
+  const passed = /(\d+) passed/.exec(groups);
+  const failed = /(\d+) failed/.exec(groups);
+  return { passed: passed ? +passed[1] : 0, failed: failed ? +failed[1] : 0 };
+}
 var FAILING_NAME_RE = /^\s*✖ (?!failing tests:)(.+?) \(\d[\d.]*m?s\)\s*$/gm;
 function parseTestOutput(output) {
   let best = null;
@@ -118,16 +133,21 @@ function pickEpisode(episodes) {
 var SECRET_RES = [
   /\bsk-[A-Za-z0-9_-]{16,}\b/g,
   // OpenAI/Anthropic-style keys
+  /\bsk_(?:live|test)_[A-Za-z0-9]{10,}\b/g,
+  // Stripe
+  /\bxox[abpr]-[A-Za-z0-9-]{10,}\b/g,
+  // Slack
   /\bgh[pousr]_[A-Za-z0-9]{20,}\b/g,
   // GitHub tokens
   /\bAKIA[0-9A-Z]{16}\b/g,
   // AWS access keys
   /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g,
   // JWTs
-  /(?<![A-Za-z0-9+/])[A-Za-z0-9+/]{40,}={0,2}(?![A-Za-z0-9+/=])/g
-  // long base64-ish tokens
+  /(?<![A-Za-z0-9+/._-])[A-Za-z0-9+]{40,}={0,2}(?![A-Za-z0-9+/=._-])/g
+  // long base64-ish tokens (no "/": paths)
 ];
-var DROP_LINE_RE = /password|secret|token=/i;
+var KEY_VALUE_RE = /\b(api[_-]?key|secret|token|password|passwd)(\s*[:=]\s*)("[^"]*"|'[^']*'|[^\s&;,]+)/gi;
+var SENSITIVE_LINE_RE = /password|passwd|secret|token=|api[_-]?key/i;
 var escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 function redact(text, opts) {
   const root = opts.root.replace(/\/$/, "");
@@ -136,11 +156,11 @@ function redact(text, opts) {
   if (root) out = out.replace(new RegExp(escapeRe(root) + "/", "g"), "");
   if (home) out = out.replace(new RegExp(escapeRe(home) + "(?=/|\\b)", "g"), "~");
   for (const re of SECRET_RES) out = out.replace(re, "[redacted]");
-  if (!DROP_LINE_RE.test(out)) return out;
-  const lines = out.split("\n");
-  const trailing = lines[lines.length - 1] === "" ? lines.pop() : void 0;
-  const kept = lines.filter((line) => !DROP_LINE_RE.test(line));
-  return kept.join("\n") + (trailing !== void 0 ? "\n" : "");
+  out = out.replace(KEY_VALUE_RE, "$1$2[redacted]");
+  return out;
+}
+function isSensitiveLine(line) {
+  return SENSITIVE_LINE_RE.test(line);
 }
 function redactDeep(value, opts) {
   if (typeof value === "string") return redact(value, opts);
@@ -193,19 +213,22 @@ function buildClipData(e, meta) {
     states.push(state);
   }
   const commits = e.events.filter((ev) => ev.kind === "commit").map((c) => ({ hash: c.hash, subject: c.subject }));
+  const redactOpts = { home: meta.home, root: meta.root };
+  const codeLines = (edits.find((ed) => ed.lines?.length)?.lines ?? []).filter((l) => l.trim() && !isSensitiveLine(l)).map((l) => redact(l, redactOpts)).slice(0, MAX_CODE_LINES).map((l) => l.slice(0, MAX_CODE_CHARS));
+  const shown = states.length > MAX_TEST_STATES ? [...states.slice(0, MAX_TEST_STATES - 1), states[states.length - 1]] : states;
   const data = {
     repo: meta.repo,
     date: e.startedAt.slice(0, 10),
-    prompt: e.prompt,
+    prompt: e.prompt.replace(/\s+/g, " ").trim(),
     minutes: Math.round((Date.parse(e.endedAt) - Date.parse(e.startedAt)) / 6e4),
     files,
-    codeLines: (edits.find((ed) => ed.lines?.length)?.lines ?? []).filter((l) => l.trim()).slice(0, MAX_CODE_LINES).map((l) => l.slice(0, MAX_CODE_CHARS)),
-    tests: states.slice(0, MAX_TEST_STATES),
-    moreRuns: Math.max(0, states.length - MAX_TEST_STATES),
+    codeLines,
+    tests: shown,
+    moreRuns: states.length - shown.length,
     commits,
     redCount
   };
-  return redactDeep(data, { home: meta.home, root: meta.root });
+  return redactDeep(data, redactOpts);
 }
 
 // src/render.ts
@@ -225,7 +248,7 @@ function sceneDurations(data) {
 }
 function prepareProject(data, dir) {
   import_node_fs.default.cpSync(TEMPLATES, dir, { recursive: true });
-  const json = JSON.stringify(data).replace(/<\/script/gi, "<\\/script");
+  const json = JSON.stringify(data).replace(/</g, "\\u003c");
   const d = sceneDurations(data);
   const slots = {
     __TOTAL__: String(d.total),
@@ -300,10 +323,13 @@ var import_node_fs2 = __toESM(require("node:fs"));
 var import_node_os2 = __toESM(require("node:os"));
 var import_node_path2 = __toESM(require("node:path"));
 var MAX_PATCH_LINES = 12;
-var TEST_COMMAND_RE = /\b(npm (run )?test|pnpm test|yarn test|bun test|vitest|jest|node --test|pytest|go test|cargo test)\b/;
+var TEST_COMMAND_RE = /\b(npm (run )?test|pnpm test|yarn test|bun test|vitest|jest|node --test|pytest|cargo test)\b/;
 var COMMIT_RE = /\[\w[\w\/-]* ([0-9a-f]{7,})\] (.+)/;
+function encodeProjectDir(cwd) {
+  return cwd.replace(/[^a-zA-Z0-9]/g, "-");
+}
 function sessionsFor(cwd, home = import_node_os2.default.homedir()) {
-  const dir = import_node_path2.default.join(home, ".claude", "projects", cwd.replace(/\//g, "-"));
+  const dir = import_node_path2.default.join(home, ".claude", "projects", encodeProjectDir(cwd));
   if (!import_node_fs2.default.existsSync(dir)) return [];
   return import_node_fs2.default.readdirSync(dir).filter((f) => f.endsWith(".jsonl")).map((f) => import_node_path2.default.join(dir, f)).sort((a, b) => import_node_fs2.default.statSync(b).mtimeMs - import_node_fs2.default.statSync(a).mtimeMs);
 }
@@ -314,7 +340,8 @@ function promptText(content) {
     text = content.filter((b) => b && b.type === "text").map((b) => b.text ?? "").join(" ");
   else return null;
   text = text.trim();
-  if (!text || text.startsWith("<") || text.startsWith("Caveat:") || text.startsWith("Base directory for this skill:")) return null;
+  if (!text || text.startsWith("<") || text.startsWith("Caveat:") || text.startsWith("Base directory for this skill:") || text.startsWith("[Request interrupted"))
+    return null;
   return text;
 }
 function patchCounts(extra) {
@@ -344,7 +371,7 @@ function parseTranscript(file) {
     } catch {
       continue;
     }
-    if (!o || typeof o !== "object" || o.isSidechain) continue;
+    if (!o || typeof o !== "object" || o.isSidechain || o.isMeta || o.isCompactSummary) continue;
     const msg = o.message ?? {};
     const at = o.timestamp ?? cur?.endedAt ?? "";
     if (o.type === "user") {

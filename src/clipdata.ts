@@ -1,6 +1,6 @@
 import type { ScoredEpisode } from './score';
 import { isRed } from './score';
-import { redactDeep } from './redact';
+import { isSensitiveLine, redact, redactDeep } from './redact';
 import type { FileEdit, TestRun } from './transcript';
 
 export type TestState = { clock: string; passed: number; failed: number; total: number; failingNames: string[]; isNew?: boolean };
@@ -67,20 +67,26 @@ export function buildClipData(e: ScoredEpisode, meta: { repo: string; home: stri
   }
 
   const commits = e.events.filter((ev) => ev.kind === 'commit').map((c) => ({ hash: c.hash, subject: c.subject }));
+  // Code lines: redact each line first (so a key cut by truncation can't slip through), drop credential lines, then cut.
+  const redactOpts = { home: meta.home, root: meta.root };
+  const codeLines = (edits.find((ed) => ed.lines?.length)?.lines ?? [])
+    .filter((l) => l.trim() && !isSensitiveLine(l))
+    .map((l) => redact(l, redactOpts))
+    .slice(0, MAX_CODE_LINES)
+    .map((l) => l.slice(0, MAX_CODE_CHARS));
+  // More than MAX states: keep the first MAX-1 and the final run, so the clip ends where the session did.
+  const shown = states.length > MAX_TEST_STATES ? [...states.slice(0, MAX_TEST_STATES - 1), states[states.length - 1]] : states;
   const data: ClipData = {
     repo: meta.repo,
     date: e.startedAt.slice(0, 10),
-    prompt: e.prompt,
+    prompt: e.prompt.replace(/\s+/g, ' ').trim(),
     minutes: Math.round((Date.parse(e.endedAt) - Date.parse(e.startedAt)) / 60_000),
     files,
-    codeLines: (edits.find((ed) => ed.lines?.length)?.lines ?? [])
-      .filter((l) => l.trim())
-      .slice(0, MAX_CODE_LINES)
-      .map((l) => l.slice(0, MAX_CODE_CHARS)),
-    tests: states.slice(0, MAX_TEST_STATES),
-    moreRuns: Math.max(0, states.length - MAX_TEST_STATES),
+    codeLines,
+    tests: shown,
+    moreRuns: states.length - shown.length,
     commits,
     redCount,
   };
-  return redactDeep(data, { home: meta.home, root: meta.root });
+  return redactDeep(data, redactOpts);
 }

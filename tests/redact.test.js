@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
-const { redact, redactDeep } = require('../dist/redact.js');
+const { redact, redactDeep, isSensitiveLine } = require('../dist/redact.js');
 
 const opts = { home: '/Users/x', root: '/Users/x/proj' };
 
@@ -19,8 +19,28 @@ test('key-shaped strings are masked', () => {
   for (const c of cases) assert.strictEqual(redact(`x=${c};`, opts), 'x=[redacted];', c);
 });
 
-test('lines mentioning passwords, secrets or token= are dropped', () => {
-  assert.strictEqual(redact('ok\nconst password = "hunter2";\nstill ok\nSECRET: 1\nurl?token=abc\n', opts), 'ok\nstill ok\n');
+test('key=value pairs are masked, the surrounding text survives', () => {
+  assert.strictEqual(redact('const password = "hunter2";', opts), 'const password = [redacted];');
+  assert.strictEqual(redact('url?token=abc&x=1', opts), 'url?token=[redacted]&x=1');
+  assert.strictEqual(redact('API_KEY: deadbeefdeadbeefdeadbeefdeadbeef', opts), 'API_KEY: [redacted]');
+});
+
+test('ordinary words and paths that mention secrets are left alone', () => {
+  assert.strictEqual(redact('Fix the password reset flow', opts), 'Fix the password reset flow');
+  assert.strictEqual(redact('src/auth/secrets.ts', opts), 'src/auth/secrets.ts');
+  const long = 'packages/frontend/src/components/forms/Input.tsx';
+  assert.strictEqual(redact(long, opts), long);
+});
+
+test('Stripe and Slack keys are masked', () => {
+  assert.strictEqual(redact('sk_live_abcdefghijklmnop', opts), '[redacted]');
+  assert.strictEqual(redact('xoxb-1234567890-abcdefghij', opts), '[redacted]');
+});
+
+test('isSensitiveLine flags lines for multi-line code fields', () => {
+  assert.strictEqual(isSensitiveLine('const password = "x"'), true);
+  assert.strictEqual(isSensitiveLine('SECRET: 1'), true);
+  assert.strictEqual(isSensitiveLine('return a + b;'), false);
 });
 
 test('plain code is unchanged', () => {

@@ -27,7 +27,7 @@ npx clip ... --prompt "text"   # replace the prompt shown on screen
 
 ## Input
 
-Claude Code transcripts: `~/.claude/projects/<encoded-cwd>/<session>.jsonl`. The encoded folder name is the cwd with `/` replaced by `-`. One JSON object per line. Facts Clip relies on (all verified on real transcripts):
+Claude Code transcripts: `~/.claude/projects/<encoded-cwd>/<session>.jsonl`. The encoded folder name is the cwd with every non-alphanumeric character replaced by `-` (verified against real folders on 2026-10-13; very long paths may be truncated/hashed by newer versions, unverified). One JSON object per line. Facts Clip relies on (all verified on real transcripts):
 
 - Every line has `timestamp`, `type` (`user` | `assistant` | …), `isSidechain`, `cwd`.
 - A user prompt is a `user` line whose `message.content` is a string or has a `text` block. Lines starting with `<` or `Caveat:` are system attachments, not prompts.
@@ -46,7 +46,7 @@ Five modules, each a pure function over plain data, each testable alone.
 
 ### 2. `tests.ts` — read test output
 
-`parseTestOutput(stdout+stderr) → { passed, failed, total, failingNames }`. Supports: node `--test` (spec reporter `ℹ pass N` and TAP `# pass N`), jest/vitest (`Tests: N passed, M failed`), pytest (`N passed, M failed`). Commands are recognised by regex (`npm test`, `node --test`, `vitest`, `jest`, `pytest`, `go test`, `cargo test`). Unknown output → `null`, and the run is shown only as pass/fail from exit status, labelled "unparsed".
+`parseTestOutput(stdout+stderr) → { passed, failed, total, failingNames }`. Supports: node `--test` (spec reporter `ℹ pass N` and TAP `# pass N`, the `tests N` line optional), jest (`Tests: … N total`, groups in any order), vitest (`Tests  N failed | M passed (T)`), pytest (`N failed, M passed in …`), cargo (`test result: … N passed; M failed`). Commands are recognised by regex (`npm test`, `node --test`, `vitest`, `jest`, `pytest`, `cargo test`); `go test` prints no counts and is not recognised. Unknown output → `null`; such runs are left out of the clip entirely (shown nowhere, not counted as red) and an episode needs at least one readable run to qualify.
 
 ### 3. `score.ts` — pick the episode
 

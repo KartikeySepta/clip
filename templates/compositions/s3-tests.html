@@ -92,7 +92,7 @@
           // One meter state per test run, at 1.4 s intervals. Red states glitch; green ones settle.
           var maxTotal = tests.reduce(function (m, t) { return Math.max(m, t.total); }, 0) || 1;
           document.getElementById("s3-cap-right").textContent = maxTotal + " tests";
-          if (D.moreRuns > 0) document.getElementById("s3-cap-left").textContent = "test suite · +" + D.moreRuns + " more runs";
+          if (D.moreRuns > 0) document.getElementById("s3-cap-left").textContent = "test suite · +" + D.moreRuns + (D.moreRuns === 1 ? " earlier run" : " earlier runs");
           var meter = document.getElementById("s3-meter");
           var namesEl = document.getElementById("s3-names");
           var STATES = tests.map(function (t, i) {

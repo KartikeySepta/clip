@@ -22,7 +22,8 @@ export function sceneDurations(data: ClipData): Durations {
 /** Copy the bundled scenes into `dir`, inject the data, and write the HyperFrames project files. */
 export function prepareProject(data: ClipData, dir: string): string {
   fs.cpSync(TEMPLATES, dir, { recursive: true });
-  const json = JSON.stringify(data).replace(/<\/script/gi, '<\\/script');
+  // Every "<" becomes < inside the JSON string literals, so no payload can close the <script> or open a comment.
+  const json = JSON.stringify(data).replace(/</g, '\\u003c');
   const d = sceneDurations(data);
   const slots: Record<string, string> = {
     __TOTAL__: String(d.total),

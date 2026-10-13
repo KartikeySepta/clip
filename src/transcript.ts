@@ -17,15 +17,21 @@ export type Commit = { kind: 'commit'; hash: string; subject: string; at: string
 export type Event = FileEdit | TestRun | Commit;
 export type Episode = { index: number; prompt: string; startedAt: string; endedAt: string; events: Event[] };
 
+// `go test` prints no counts, so it is not a test command Clip can read.
 export const TEST_COMMAND_RE =
-  /\b(npm (run )?test|pnpm test|yarn test|bun test|vitest|jest|node --test|pytest|go test|cargo test)\b/;
+  /\b(npm (run )?test|pnpm test|yarn test|bun test|vitest|jest|node --test|pytest|cargo test)\b/;
 const COMMIT_RE = /\[\w[\w\/-]* ([0-9a-f]{7,})\] (.+)/;
 
 type ToolCall = { name: string; input: Record<string, any> };
 
+/** Claude Code's project folder name: every non-alphanumeric character becomes "-". */
+export function encodeProjectDir(cwd: string): string {
+  return cwd.replace(/[^a-zA-Z0-9]/g, '-');
+}
+
 /** Transcript files for a cwd, newest first. */
 export function sessionsFor(cwd: string, home: string = os.homedir()): string[] {
-  const dir = path.join(home, '.claude', 'projects', cwd.replace(/\//g, '-'));
+  const dir = path.join(home, '.claude', 'projects', encodeProjectDir(cwd));
   if (!fs.existsSync(dir)) return [];
   return fs
     .readdirSync(dir)
@@ -41,8 +47,15 @@ function promptText(content: unknown): string | null {
     text = content.filter((b) => b && b.type === 'text').map((b) => b.text ?? '').join(' ');
   else return null;
   text = text.trim();
-  // System attachments, command echoes and skill expansions arrive as user lines but nobody typed them.
-  if (!text || text.startsWith('<') || text.startsWith('Caveat:') || text.startsWith('Base directory for this skill:')) return null;
+  // System attachments, command echoes, skill expansions and interrupts arrive as user lines but nobody typed them.
+  if (
+    !text ||
+    text.startsWith('<') ||
+    text.startsWith('Caveat:') ||
+    text.startsWith('Base directory for this skill:') ||
+    text.startsWith('[Request interrupted')
+  )
+    return null;
   return text;
 }
 
@@ -76,7 +89,7 @@ export function parseTranscript(file: string): Episode[] {
     } catch {
       continue;
     }
-    if (!o || typeof o !== 'object' || o.isSidechain) continue;
+    if (!o || typeof o !== 'object' || o.isSidechain || o.isMeta || o.isCompactSummary) continue;
     const msg = o.message ?? {};
     const at: string = o.timestamp ?? cur?.endedAt ?? '';
 

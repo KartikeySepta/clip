@@ -34,6 +34,15 @@ test('prepareProject injects the data into every scene and sets the slot times',
   assert.ok(fs.existsSync(path.join(dir, 'hyperframes.json')));
 });
 
+test('injected JSON cannot close the script tag or open a comment', () => {
+  const d = { ...data(), codeLines: ['<!-- <script>', '</script><b>'] };
+  const dir = prepareProject(d, tmp());
+  const html = fs.readFileSync(path.join(dir, 'compositions', 's2-work.html'), 'utf8');
+  assert.ok(!html.includes('<!-- <script>'));
+  assert.ok(!html.includes('</script><b>'));
+  assert.ok(html.includes('\\u003c!-- \\u003cscript>'));
+});
+
 test('renders a 1080x1080 mp4 between 24 and 34 s', { skip: process.env.CLIP_SKIP_RENDER === '1' }, async () => {
   const out = path.join(tmp(), 'out.mp4');
   const r = await renderClip(data(), out);

@@ -30,15 +30,22 @@ test('skips sidechain lines, broken JSON, orphan results and skill expansions', 
   assert.strictEqual(eps[1].events.length, 6);
 });
 
-test('sessionsFor maps cwd to the encoded project folder, newest first', () => {
+test('sessionsFor encodes every non-alphanumeric character as "-", newest first', () => {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'clip-home-'));
-  const dir = path.join(home, '.claude', 'projects', '-home-dev-proj');
+  const dir = path.join(home, '.claude', 'projects', '-home-dev-my-app-v2');
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, 'old.jsonl'), '');
   fs.writeFileSync(path.join(dir, 'new.jsonl'), '');
   const t = Date.now() / 1000;
   fs.utimesSync(path.join(dir, 'old.jsonl'), t - 10, t - 10);
   fs.utimesSync(path.join(dir, 'new.jsonl'), t, t);
-  assert.deepStrictEqual(sessionsFor('/home/dev/proj', home).map((p) => path.basename(p)), ['new.jsonl', 'old.jsonl']);
+  assert.deepStrictEqual(sessionsFor('/home/dev/my_app.v2', home).map((p) => path.basename(p)), ['new.jsonl', 'old.jsonl']);
   assert.deepStrictEqual(sessionsFor('/nowhere', home), []);
+});
+
+test('interrupts and compaction summaries continue the episode instead of starting one', () => {
+  const eps = parseTranscript(fx('interrupted.jsonl'));
+  assert.strictEqual(eps.length, 1);
+  assert.strictEqual(eps[0].prompt, 'Make the snapshot engine faster and keep the tests green');
+  assert.strictEqual(eps[0].events.length, 6);
 });

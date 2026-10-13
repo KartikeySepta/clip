@@ -27,14 +27,24 @@ test('builds the clip facts from the red→green fixture', () => {
   assert.deepStrictEqual(d.codeLines, ['a', 'b']);
 });
 
-test('caps test states at 8 and counts the rest', () => {
+test('caps test states at 8: the first 7 plus the final run', () => {
   const e = episode();
   const run = e.events[4];
   const extra = Array.from({ length: 9 }, (_, i) => ({ ...run, at: new Date(Date.parse(run.at) + (i + 1) * 1000).toISOString() }));
-  const big = scoreEpisode({ ...e, events: [...e.events, ...extra] });
+  const last = { ...run, output: 'ℹ tests 50\nℹ pass 50\nℹ fail 0\n', at: new Date(Date.parse(run.at) + 20_000).toISOString() };
+  const big = scoreEpisode({ ...e, events: [...e.events, ...extra, last] });
   const d = buildClipData(big, meta);
   assert.strictEqual(d.tests.length, 8);
-  assert.strictEqual(d.moreRuns, 3);
+  assert.strictEqual(d.moreRuns, 4);
+  assert.strictEqual(d.tests[7].total, 50, 'the final run is always shown');
+});
+
+test('prompt whitespace is collapsed and code lines with secrets are dropped', () => {
+  const e = episode();
+  const leaky = { ...e, prompt: 'line one\n\n  line   two', events: e.events.map((ev, i) => (i === 0 ? { ...ev, lines: ['const password = "x"', 'ok line'] } : ev)) };
+  const d = buildClipData(scoreEpisode(leaky), meta);
+  assert.strictEqual(d.prompt, 'line one line two');
+  assert.deepStrictEqual(d.codeLines, ['ok line']);
 });
 
 test('a failing run with unparsable output is not counted as red', () => {

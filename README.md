@@ -39,7 +39,7 @@ Clip picks the episode (one prompt and the work that followed it) with the best 
 
 ## What it reads
 
-Test results come from the runner's own summary, not the command's exit code: node `--test`, jest, vitest and pytest. Runs it can't read are left out of the clip. File changes come from Claude's Edit/Write calls and from shell commands that changed files (`sed`, heredocs, codegen).
+Test results come from the runner's own summary, not the command's exit code: node `--test`, jest, vitest, pytest and cargo. Runs it can't read (and `go test`, which prints no counts) are left out of the clip. macOS and Linux only for now. File changes come from Claude's Edit/Write calls and from shell commands that changed files (`sed`, heredocs, codegen).
 
 ## Status
 
