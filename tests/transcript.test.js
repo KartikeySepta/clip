@@ -13,7 +13,7 @@ test('splits into episodes and typed events', () => {
   const e = eps[1];
   assert.strictEqual(e.prompt, 'Make the snapshot engine faster and keep the tests green');
   assert.deepStrictEqual(e.events.map((x) => x.kind), ['write', 'edit', 'test', 'test', 'commit']);
-  assert.deepStrictEqual(e.events[0], { kind: 'write', file: 'src/clone.ts', added: 2, removed: 0, at: e.events[0].at });
+  assert.deepStrictEqual(e.events[0], { kind: 'write', file: 'src/clone.ts', added: 2, removed: 0, at: e.events[0].at, lines: ['a', 'b'] });
   assert.deepStrictEqual(e.events[1], { kind: 'edit', file: 'src/snapshot.ts', added: 3, removed: 1, at: e.events[1].at });
   assert.strictEqual(e.events[2].exitOk, false);
   assert.match(e.events[2].output, /pass 8/);

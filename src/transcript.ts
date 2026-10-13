@@ -2,7 +2,16 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-export type FileEdit = { kind: 'write' | 'edit' | 'shell'; file: string; added: number; removed: number; at: string };
+export type FileEdit = {
+  kind: 'write' | 'edit' | 'shell';
+  file: string;
+  added: number;
+  removed: number;
+  at: string;
+  /** First added lines of a Write's patch, for the code card. */
+  lines?: string[];
+};
+const MAX_PATCH_LINES = 12;
 export type TestRun = { kind: 'test'; command: string; exitOk: boolean; output: string; at: string };
 export type Commit = { kind: 'commit'; hash: string; subject: string; at: string };
 export type Event = FileEdit | TestRun | Commit;
@@ -36,15 +45,18 @@ function promptText(content: unknown): string | null {
   return text;
 }
 
-function patchCounts(extra: any): { added: number; removed: number } {
+function patchCounts(extra: any): { added: number; removed: number; lines: string[] } {
   let added = 0;
   let removed = 0;
+  const lines: string[] = [];
   for (const hunk of extra?.structuredPatch ?? [])
     for (const line of hunk.lines ?? []) {
-      if (line.startsWith('+')) added++;
-      else if (line.startsWith('-')) removed++;
+      if (line.startsWith('+')) {
+        added++;
+        if (lines.length < MAX_PATCH_LINES) lines.push(line.slice(1));
+      } else if (line.startsWith('-')) removed++;
     }
-  return { added, removed };
+  return { added, removed, lines };
 }
 
 function relative(file: string, cwd: string): string {
@@ -83,14 +95,16 @@ export function parseTranscript(file: string): Episode[] {
         if (!call) continue;
         const cwd: string = o.cwd ?? '';
         if (call.name === 'Write' || call.name === 'Edit' || call.name === 'MultiEdit') {
-          const { added, removed } = patchCounts(extra);
-          cur.events.push({
+          const { added, removed, lines } = patchCounts(extra);
+          const ev: FileEdit = {
             kind: call.name === 'Write' ? 'write' : 'edit',
             file: relative(extra.filePath ?? call.input.file_path ?? '?', cwd),
             added,
             removed,
             at,
-          });
+          };
+          if (ev.kind === 'write' && lines.length) ev.lines = lines;
+          cur.events.push(ev);
         } else if (call.name === 'Bash') {
           const command: string = call.input.command ?? '';
           const output = `${extra.stdout ?? ''}\n${extra.stderr ?? ''}`;
