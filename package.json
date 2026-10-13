@@ -1,0 +1,20 @@
+{
+  "name": "@atpes/clip",
+  "version": "0.1.0",
+  "description": "Your Claude Code session → a 30-second video.",
+  "license": "MIT",
+  "repository": "github:KartikeySepta/clip",
+  "bin": { "clip": "bin/clip.cjs" },
+  "files": ["bin", "templates"],
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "build": "tsc --noEmit && node scripts/build.mjs",
+    "test": "npm run build && tsc && node --test tests/*.test.js",
+    "prepack": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.8.0"
+  }
+}

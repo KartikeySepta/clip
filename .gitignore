@@ -1,0 +1,5 @@
+node_modules/
+dist/
+.superpowers/
+*.mp4
+!clip-demo.mp4
