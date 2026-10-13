@@ -29,6 +29,8 @@ const redGreen = [
   { ...base(2.5, { type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: 'subagent noise' }] } }), isSidechain: true },
   toolUse(3, 't2', 'Edit', { file_path: `${CWD}/src/snapshot.ts`, old_string: 'x', new_string: 'y' }),
   toolResult(3.1, 't2', false, 'ok', { type: 'update', filePath: `${CWD}/src/snapshot.ts`, structuredPatch: [{ lines: ['-x', '+y', '+y2', '+y3'] }] }),
+  toolUse(4, 't6', 'Bash', { command: "sed -i '' 's/a/b/' bin/core.cjs" }),
+  toolResult(4.1, 't6', false, '', { stdout: '', stderr: '', bashEditDiff: { files: [{ filePath: `${CWD}/bin/core.cjs`, hunks: [{ lines: [' ctx', '+x', '+y', '-z'] }] }] } }),
   toolUse(5, 't3', 'Bash', { command: 'node --test tests/' }),
   bashResult(5.2, 't3', true, 'ℹ tests 9\nℹ pass 8\nℹ fail 1\n✖ failing tests:\n✖ copy fallback honours the size guard (1.2ms)\n'),
   toolUse(7, 't4', 'Bash', { command: 'npm test' }),
@@ -46,7 +48,11 @@ const noTests = [
 ];
 
 const broken = [...redGreen];
-broken.splice(6, 0, '{"type":"assist', toolResult(2.6, 'never-seen', false, 'orphan', { stdout: 'x' }));
+broken.splice(6, 0,
+  '{"type":"assist',
+  toolResult(2.6, 'never-seen', false, 'orphan', { stdout: 'x' }),
+  prompt(2.7, 'Base directory for this skill: /home/dev/.claude/skills/x\n\n# Some skill\nDo things.'),
+);
 
 const write = (name, lines) =>
   fs.writeFileSync(path.join(__dirname, name), lines.map((l) => (typeof l === 'string' ? l : JSON.stringify(l))).join('\n') + '\n');

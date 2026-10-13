@@ -6,10 +6,10 @@ const { scoreEpisode, pickEpisode } = require('../dist/score.js');
 
 const fx = (n) => path.join(__dirname, 'fixtures', n);
 
-test('red→green episode scores 7.4', () => {
+test('red→green episode scores 7.6', () => {
   const e = scoreEpisode(parseTranscript(fx('red-green.jsonl'))[1]);
   assert.strictEqual(e.redToGreen, true);
-  assert.strictEqual(Math.round(e.score * 10) / 10, 7.4);
+  assert.strictEqual(Math.round(e.score * 10) / 10, 7.6); // 3 red→green + 3 edits 0.6 + 8 min 2 + short prompt 2
   assert.strictEqual(e.tests.length, 2);
   assert.strictEqual(e.tests[0].failed, 1);
 });

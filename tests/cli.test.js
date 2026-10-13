@@ -49,7 +49,7 @@ test('--list prints scored episodes of every session', () => {
   const r = run(world(['no-tests.jsonl', 'red-green.jsonl']), ['--list']);
   assert.strictEqual(r.code, 0, r.err);
   assert.match(r.out, /red-green/);
-  assert.match(r.out, /#1 .*7\.4/);
+  assert.match(r.out, /#1 .*7\.6/);
   assert.match(r.out, /Make the snapshot engine faster/);
 });
 
@@ -74,6 +74,14 @@ test('a session-id prefix and --episode pick explicitly', () => {
   const r = run(w, ['red-gr', '--episode', '1', '--out', path.join(w.cwd, 'clip.mp4')]);
   assert.strictEqual(r.code, 0, r.err);
   assert.ok(fs.existsSync(path.join(w.cwd, 'clip.clipdata.json')));
+});
+
+test('default run falls back past a newest session with nothing clip-worthy', () => {
+  const w = world(['red-green.jsonl', 'no-tests.jsonl']); // no-tests is newest
+  const r = run(w, ['--out', path.join(w.cwd, 'clip.mp4')]);
+  assert.strictEqual(r.code, 0, r.err);
+  const data = JSON.parse(fs.readFileSync(path.join(w.cwd, 'clip.clipdata.json'), 'utf8'));
+  assert.strictEqual(data.tests.length, 2);
 });
 
 test('--help exits 0 and names the flags', () => {

@@ -3,12 +3,12 @@ export type TestSummary = { passed: number; failed: number; total: number; faili
 // One matcher per runner. Each returns every match so the LAST summary in an output wins
 // (a wrapper like `npm test` can print a nested runner's summary first).
 const FORMATS: { re: RegExp; pick: (m: RegExpExecArray) => { passed: number; failed: number; total?: number } }[] = [
-  // node --test, spec reporter
-  { re: /ℹ tests (\d+)\s*\n\s*ℹ (?:suites \d+\s*\n\s*)?pass (\d+)\s*\n\s*ℹ fail (\d+)/g,
-    pick: (m) => ({ total: +m[1], passed: +m[2], failed: +m[3] }) },
+  // node --test, spec reporter. The `tests N` line is optional: outputs piped through grep often keep only pass/fail.
+  { re: /(?:ℹ tests (\d+)\s*\n\s*(?:ℹ suites \d+\s*\n\s*)?)?ℹ pass (\d+)\s*\n\s*ℹ fail (\d+)/g,
+    pick: (m) => ({ total: m[1] ? +m[1] : undefined, passed: +m[2], failed: +m[3] }) },
   // node --test, TAP reporter
-  { re: /# tests (\d+)\s*\n\s*(?:# suites \d+\s*\n\s*)?# pass (\d+)\s*\n\s*# fail (\d+)/g,
-    pick: (m) => ({ total: +m[1], passed: +m[2], failed: +m[3] }) },
+  { re: /(?:# tests (\d+)\s*\n\s*(?:# suites \d+\s*\n\s*)?)?# pass (\d+)\s*\n\s*# fail (\d+)/g,
+    pick: (m) => ({ total: m[1] ? +m[1] : undefined, passed: +m[2], failed: +m[3] }) },
   // jest / vitest
   { re: /Tests:\s+(?:(\d+) failed, )?(?:(\d+) skipped, )?(\d+) passed, (\d+) total/g,
     pick: (m) => ({ failed: +(m[1] ?? 0), passed: +m[3], total: +m[4] }) },

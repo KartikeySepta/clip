@@ -44,15 +44,15 @@ var version = "0.1.0";
 
 // src/tests.ts
 var FORMATS = [
-  // node --test, spec reporter
+  // node --test, spec reporter. The `tests N` line is optional: outputs piped through grep often keep only pass/fail.
   {
-    re: /ℹ tests (\d+)\s*\n\s*ℹ (?:suites \d+\s*\n\s*)?pass (\d+)\s*\n\s*ℹ fail (\d+)/g,
-    pick: (m) => ({ total: +m[1], passed: +m[2], failed: +m[3] })
+    re: /(?:ℹ tests (\d+)\s*\n\s*(?:ℹ suites \d+\s*\n\s*)?)?ℹ pass (\d+)\s*\n\s*ℹ fail (\d+)/g,
+    pick: (m) => ({ total: m[1] ? +m[1] : void 0, passed: +m[2], failed: +m[3] })
   },
   // node --test, TAP reporter
   {
-    re: /# tests (\d+)\s*\n\s*(?:# suites \d+\s*\n\s*)?# pass (\d+)\s*\n\s*# fail (\d+)/g,
-    pick: (m) => ({ total: +m[1], passed: +m[2], failed: +m[3] })
+    re: /(?:# tests (\d+)\s*\n\s*(?:# suites \d+\s*\n\s*)?)?# pass (\d+)\s*\n\s*# fail (\d+)/g,
+    pick: (m) => ({ total: m[1] ? +m[1] : void 0, passed: +m[2], failed: +m[3] })
   },
   // jest / vitest
   {
@@ -314,7 +314,7 @@ function promptText(content) {
     text = content.filter((b) => b && b.type === "text").map((b) => b.text ?? "").join(" ");
   else return null;
   text = text.trim();
-  if (!text || text.startsWith("<") || text.startsWith("Caveat:")) return null;
+  if (!text || text.startsWith("<") || text.startsWith("Caveat:") || text.startsWith("Base directory for this skill:")) return null;
   return text;
 }
 function patchCounts(extra) {
@@ -383,7 +383,12 @@ ${extra.stderr ?? ""}`;
           } else if (commit) {
             cur.events.push({ kind: "commit", hash: commit[1], subject: commit[2].trim(), at });
           } else if (extra.bashEditDiff) {
-            cur.events.push({ kind: "shell", file: "", added: 0, removed: 0, at });
+            const diffFiles = Array.isArray(extra.bashEditDiff?.files) ? extra.bashEditDiff.files : [];
+            if (diffFiles.length === 0) cur.events.push({ kind: "shell", file: "", added: 0, removed: 0, at });
+            for (const df of diffFiles) {
+              const { added, removed } = patchCounts({ structuredPatch: df.hunks });
+              cur.events.push({ kind: "shell", file: relative(df.filePath ?? "", cwd), added, removed, at });
+            }
           }
         }
       }
@@ -454,9 +459,9 @@ ${HELP}`);
     if (sessions.length === 0) return fail(`No session starting with "${args.session}".`);
   }
   if (args.list) {
-    for (const file2 of sessions) {
-      const eps = parseTranscript(file2).map(scoreEpisode).filter((e) => e.events.length > 0);
-      console.log(`${import_node_path3.default.basename(file2, ".jsonl")}  (${eps.length} episodes with activity)`);
+    for (const file of sessions) {
+      const eps = parseTranscript(file).map(scoreEpisode).filter((e) => e.events.length > 0);
+      console.log(`${import_node_path3.default.basename(file, ".jsonl")}  (${eps.length} episodes with activity)`);
       for (const e of eps) {
         const tests = e.tests.length ? `tests:${e.tests.length}${e.redToGreen ? " red\u2192green" : ""}` : "no tests";
         console.log(`  #${e.index} ${e.score.toFixed(1).padStart(5)}  ${tests.padEnd(18)} ${e.prompt.replace(/\s+/g, " ").slice(0, 70)}`);
@@ -464,11 +469,17 @@ ${HELP}`);
     }
     return 0;
   }
-  const file = sessions[0];
-  const episodes = parseTranscript(file);
-  const episode = args.episode !== void 0 ? episodes[args.episode] ? scoreEpisode(episodes[args.episode]) : null : pickEpisode(episodes);
-  if (!episode) {
-    return fail(args.episode !== void 0 ? `Session has no episode #${args.episode}. Try --list.` : "Nothing clip-worthy yet: Clip needs a session with edits and a test run.");
+  let episode = null;
+  if (args.episode !== void 0) {
+    const episodes = parseTranscript(sessions[0]);
+    if (!episodes[args.episode]) return fail(`Session has no episode #${args.episode}. Try --list.`);
+    episode = scoreEpisode(episodes[args.episode]);
+  } else {
+    for (const file of sessions) {
+      episode = pickEpisode(parseTranscript(file));
+      if (episode) break;
+    }
+    if (!episode) return fail("Nothing clip-worthy yet: Clip needs a session with edits and a test run.");
   }
   const forced = process.env.CLIP_REPO_VISIBILITY;
   const visibility = forced ?? await repoVisibility(cwd);

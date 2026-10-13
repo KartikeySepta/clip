@@ -41,7 +41,8 @@ function promptText(content: unknown): string | null {
     text = content.filter((b) => b && b.type === 'text').map((b) => b.text ?? '').join(' ');
   else return null;
   text = text.trim();
-  if (!text || text.startsWith('<') || text.startsWith('Caveat:')) return null;
+  // System attachments, command echoes and skill expansions arrive as user lines but nobody typed them.
+  if (!text || text.startsWith('<') || text.startsWith('Caveat:') || text.startsWith('Base directory for this skill:')) return null;
   return text;
 }
 
@@ -114,7 +115,13 @@ export function parseTranscript(file: string): Episode[] {
           } else if (commit) {
             cur.events.push({ kind: 'commit', hash: commit[1], subject: commit[2].trim(), at });
           } else if (extra.bashEditDiff) {
-            cur.events.push({ kind: 'shell', file: '', added: 0, removed: 0, at });
+            // A shell command that changed files (sed, heredoc, codegen): one event per file, same patch shape.
+            const diffFiles: any[] = Array.isArray(extra.bashEditDiff?.files) ? extra.bashEditDiff.files : [];
+            if (diffFiles.length === 0) cur.events.push({ kind: 'shell', file: '', added: 0, removed: 0, at });
+            for (const df of diffFiles) {
+              const { added, removed } = patchCounts({ structuredPatch: df.hunks });
+              cur.events.push({ kind: 'shell', file: relative(df.filePath ?? '', cwd), added, removed, at });
+            }
           }
         }
       }

@@ -81,11 +81,19 @@ export async function main(argv: string[]): Promise<number> {
     return 0;
   }
 
-  const file = sessions[0];
-  const episodes = parseTranscript(file);
-  const episode = args.episode !== undefined ? (episodes[args.episode] ? scoreEpisode(episodes[args.episode]) : null) : pickEpisode(episodes);
-  if (!episode) {
-    return fail(args.episode !== undefined ? `Session has no episode #${args.episode}. Try --list.` : 'Nothing clip-worthy yet: Clip needs a session with edits and a test run.');
+  // An explicit --episode addresses the newest matching session; the default walks back to the
+  // newest session that has something clip-worthy.
+  let episode = null;
+  if (args.episode !== undefined) {
+    const episodes = parseTranscript(sessions[0]);
+    if (!episodes[args.episode]) return fail(`Session has no episode #${args.episode}. Try --list.`);
+    episode = scoreEpisode(episodes[args.episode]);
+  } else {
+    for (const file of sessions) {
+      episode = pickEpisode(parseTranscript(file));
+      if (episode) break;
+    }
+    if (!episode) return fail('Nothing clip-worthy yet: Clip needs a session with edits and a test run.');
   }
 
   const forced = process.env.CLIP_REPO_VISIBILITY as Visibility | undefined;

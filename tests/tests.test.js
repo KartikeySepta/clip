@@ -26,6 +26,11 @@ test('two summaries in one output: the last wins', () => {
   assert.deepStrictEqual(parseTestOutput(out), { passed: 9, failed: 0, total: 9, failingNames: [] });
 });
 
+test('grep-filtered node output without the tests line still parses', () => {
+  assert.deepStrictEqual(parseTestOutput('ℹ pass 4\nℹ fail 0\n'), { passed: 4, failed: 0, total: 4, failingNames: [] });
+  assert.deepStrictEqual(parseTestOutput('# pass 3\n# fail 1\n'), { passed: 3, failed: 1, total: 4, failingNames: [] });
+});
+
 test('unknown output is null', () => {
   assert.strictEqual(parseTestOutput('hello'), null);
 });
